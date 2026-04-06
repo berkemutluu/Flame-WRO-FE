@@ -1,7 +1,10 @@
-**##WRO 2026: Future Engineers - Flame**
+## WRO 2026: Future Engineers - Flame
+
 Welcome to the official repository for Flame. This project documents the development of our autonomous vehicle designed to compete in the World Robot Olympiad (WRO) Future Engineers category.
 
 **This robot is not yet finished, this is a preliminary report of what he have currently achieved.**
+
+![WhatsApp Image 2026-04-02 at 15 32 51 (2)](https://github.com/user-attachments/assets/a9bc148b-3fa8-4b7a-9b59-c28fcdd696c8)
 
 
 ## Project Overview
@@ -16,7 +19,11 @@ PID Control: Smooth steering and speed regulation using Proportional-Integral-De
 
 Traffic Sign Recognition: Utilizing a trained model to identify "Turn Left," "Turn Right," and "Stop" signals.
 
+
 ## Bill of Materials (BOM)
+
+<img width="468" height="302" alt="circuit" src="https://github.com/user-attachments/assets/1e754c98-d8fd-4c4a-a1cb-7f15a5ce931d" />
+
 ### 1. Computing & Control
 
 Main Controller: Raspberry Pi 5 (8GB RAM)
