@@ -142,6 +142,17 @@ Our development process involved significant iterations in both hardware and cha
 
 ### Phase 1: The LEGO Prototype
 
+<img width="1152" height="2048" alt="image" src="https://github.com/user-attachments/assets/b4bac3a6-0208-45d2-a44d-260d70b5efed" />
+
+<img width="1536" height="2048" alt="image" src="https://github.com/user-attachments/assets/382b4c37-0c35-4aa0-9f4c-a3c25c82d3e3" />
+
+
+
+https://github.com/user-attachments/assets/62a144ff-5d2f-4ce8-83bb-b0b5554a5f32
+
+
+
+
 Chassis: Modified LEGO-based frame.
 
 Motor: 6V N20 Micro Gear Motor.
