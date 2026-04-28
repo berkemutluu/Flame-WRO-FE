@@ -1,8 +1,15 @@
-## WRO 2026: Future Engineers - Flame
+# WRO 2026: Future Engineers - Flame
 
 Welcome to the official repository for Flame. This project documents the development of our autonomous vehicle designed to compete in the World Robot Olympiad (WRO) Future Engineers category.
 
 **This robot is not yet finished, this is a preliminary report of what he have currently achieved.**
+
+## Current Progress
+
+As of April 28, we have designed and 3d printed our robot's chassis. We have incorprated the motor to it. We designed a differantial and steering system optimized for reducing the turning radius of our robot.
+
+<img width="4032" height="3024" alt="IMG_4815" src="https://github.com/user-attachments/assets/a8d141b2-ab2a-4be5-b52c-5dfeddb3111a" />
+<img width="3024" height="4032" alt="IMG_4814" src="https://github.com/user-attachments/assets/29564b30-a651-49cd-a292-e895a5c39c30" />
 
 ![WhatsApp Image 2026-04-02 at 15 32 51 (2)](https://github.com/user-attachments/assets/a9bc148b-3fa8-4b7a-9b59-c28fcdd696c8)
 
