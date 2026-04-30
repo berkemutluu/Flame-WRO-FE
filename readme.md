@@ -2,7 +2,7 @@
 
 Welcome to the official repository for Flame. This project documents the development of our autonomous vehicle designed to compete in the World Robot Olympiad (WRO) Future Engineers category.
 
-**This robot is not yet finished, this is a preliminary report of what he have currently achieved.**
+**This robot is not yet finished. Please keep in mind that this is only a preliminary report of what he have currently achieved.**
 
 ## Current Progress
 
