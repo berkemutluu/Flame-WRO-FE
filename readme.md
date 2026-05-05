@@ -6,6 +6,12 @@ Welcome to the official repository for Flame. This project documents the develop
 
 ## Current Progress
 
+On 5th of May, we have put together our robots chassis with the electronics, sensor, motors, differential and steering systems. We are currently working on the coding of our arduino board and pi's opencv modulation.
+
+<img width="3024" height="4032" alt="image" src="https://github.com/user-attachments/assets/360d959e-3e3d-440a-b051-244e34ad4edb" />
+<img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/d530215f-91bd-4308-92e7-e98b072b3036" />
+
+
 As of April 28, we have designed and 3d printed our robot's chassis. We have incorprated the motor to it. We designed a differantial and steering system optimized for reducing the turning radius of our robot.
 
 <img width="4032" height="3024" alt="IMG_4815" src="https://github.com/user-attachments/assets/a8d141b2-ab2a-4be5-b52c-5dfeddb3111a" />
