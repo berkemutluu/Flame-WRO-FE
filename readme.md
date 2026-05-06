@@ -2,17 +2,17 @@
 
 Welcome to the official repository for Flame. This project documents the development of our autonomous vehicle designed to compete in the World Robot Olympiad (WRO) Future Engineers category.
 
-**This robot is not yet finished. Please keep in mind that this is only a preliminary report of what he have currently achieved.**
+**This robot is still a work in progress. Please keep in mind that this is only a preliminary report of what we have achieved up until the said time per entry.**
 
 ## Current Progress
 
-On 5th of May, we have put together our robots chassis with the electronics, sensor, motors, differential and steering systems. We are currently working on the coding of our arduino board and pi's opencv modulation.
+On the 5th of May; we have put together our robots chassis with the electronics, sensor, motors, differential and steering systems. (We might reevaluate and possibly change these in the future.) We are currently working on the coding of our arduino board and pi's opencv modulation.
 
 <img width="3024" height="4032" alt="image" src="https://github.com/user-attachments/assets/360d959e-3e3d-440a-b051-244e34ad4edb" />
 <img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/d530215f-91bd-4308-92e7-e98b072b3036" />
 
 
-As of April 28, we have designed and 3d printed our robot's chassis. We have incorprated the motor to it. We designed a differantial and steering system optimized for reducing the turning radius of our robot.
+As of April 28,we have designed and 3D printed our robot's chassis and integrated the motor into it. Additionally, we have developed a differantial and steering system optimized for reducing the turning radius of our robot.
 
 <img width="4032" height="3024" alt="IMG_4815" src="https://github.com/user-attachments/assets/a8d141b2-ab2a-4be5-b52c-5dfeddb3111a" />
 <img width="3024" height="4032" alt="IMG_4814" src="https://github.com/user-attachments/assets/29564b30-a651-49cd-a292-e895a5c39c30" />
@@ -21,7 +21,7 @@ As of April 28, we have designed and 3d printed our robot's chassis. We have inc
 
 
 ## Project Overview
-Our goal was to design, build, and program a small-scale autonomous vehicle capable of navigating a track, avoiding obstacles, and reacting to traffic signals using computer vision and advanced control algorithms.
+Our objective was to develop a small-scale autonomous vehicle capable of track navigation, obstacle avoidance, and traffic signal recognition through computer vision and an advanced control algorithm. 
 
 ## Features
 Lane Detection: Real-time processing using OpenCV to identify track boundaries.
@@ -30,7 +30,7 @@ Obstacle Avoidance: Integration of ultrasonic sensors and camera depth perceptio
 
 PID Control: Smooth steering and speed regulation using Proportional-Integral-Derivative controllers and using the MPU6050 IMU.
 
-Traffic Sign Recognition: Utilizing a trained model to identify "Turn Left," "Turn Right," and "Stop" signals.
+Traffic Sign Recognition: Utilizing a trained model to identify the folowing basic traffic contol signals: "Turn Left", "Turn Right", "Move Forward", "Move Backward", "Stop" and "Go" signals.
 
 
 ## Bill of Materials (BOM)
@@ -114,7 +114,7 @@ ServoTimer2: For high-accuracy servo operations.
 
 ### Logic Flow
 
-Perception: Capture frames and apply a perspective transform (Bird's Eye View).
+Perception: Capture frames and apply a perspective transform (Bird's-Eye View).
 
 Processing: Filter colors (orange/blue lines) and calculate the deviation from the center.
 
