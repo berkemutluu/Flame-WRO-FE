@@ -1,0 +1,106 @@
+{
+    "colors": {
+        "REDLO": [
+            171,
+            185,
+            127
+        ],
+        "REDHI": [
+            179,
+            255,
+            255
+        ],
+        "RED_HEX_LO": "#a80a18",
+        "RED_HEX_HI": "#9d1f29",
+        "GREENLO": [
+            43,
+            105,
+            40
+        ],
+        "GREENHI": [
+            62,
+            255,
+            255
+        ],
+        "GREEN_HEX_LO": "#1f2d17",
+        "GREEN_HEX_HI": "#386031",
+        "ORANGELO": [
+            7,
+            20,
+            10
+        ],
+        "ORANGEHI": [
+            37,
+            255,
+            255
+        ],
+        "ORANGE_HEX_LO": "#0a0909",
+        "ORANGE_HEX_HI": "#c4ff00",
+        "BLUELO": [
+            100,
+            85,
+            90
+        ],
+        "BLUEHI": [
+            130,
+            255,
+            255
+        ],
+        "BLUE_HEX_LO": "#3c505a",
+        "BLUE_HEX_HI": "#5500ff",
+        "PINKLO": [
+            158,
+            160,
+            100
+        ],
+        "PINKHI": [
+            170,
+            255,
+            255
+        ],
+        "PINK_HEX_LO": "#642553",
+        "PINK_HEX_HI": "#ff0055",
+        "GRAY": 110
+    },
+    "tracking": {
+        "RED": false,
+        "GREEN": true,
+        "ORANGE": false,
+        "BLUE": false,
+        "PINK": false,
+        "WALLS": true
+    },
+    "camera": {
+        "crop_height": 200,
+        "gray_thresh": 110,
+        "threshold_mode": "MANUAL",
+        "follow_side": "AUTO",
+        "debug_overlay": true,
+        "drive_enabled": true,
+        "flip_code": -1,
+        "wall_target_portion": 0.45,
+        "wall_kp": 100.0,
+        "wall_kd": 8.0,
+        "center_kp": 90.0,
+        "base_speed": 210,
+        "min_speed": 150,
+        "max_speed": 230,
+        "max_steer": 45,
+        "steering_sign": 1,
+        "side_band_portion": 0.28,
+        "analysis_start_portion": 0.15,
+        "auto_side_margin": 0.05,
+        "lost_wall_min_portion": 0.018,
+        "emergency_wall_portion": 0.72,
+        "min_wall_area": 80,
+        "lost_wall_stop": true,
+        "jpeg_quality": 80
+    },
+    "serial": {
+        "port": "/dev/ttyUSB0",
+        "baud_rate": 9600,
+        "drive_sign": -1,
+        "send_interval": 0.05,
+        "max_speed_step": 14
+    }
+}
