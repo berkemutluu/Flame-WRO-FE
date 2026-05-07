@@ -182,7 +182,7 @@ Power Solution: Due to weight and space constraints, we opted for a 7.4V LiPo ba
 
 Outcome: Success.
 
-Technical Detail: By running the 12V motors at 7.4V, we effectively operate at approximately 60–70% of the rated RPM. This trade-off was intentional: it provided a more manageable speed for our computer vision processing while maintaining significantly higher torque and structural stability compared to the N20/LEGO setup.
+Technical Detail: By running the 12V motors at 7.4V, we effectively operate at approximately 60–70% of the rated RPM. This trade-off was intentional: It provided a more manageable speed for our computer vision processing while maintaining significantly higher torque and structural stability compared to the N20/LEGO setup.
 
 ### Technical Challenges Overcome
 
@@ -190,7 +190,7 @@ PWM Calibration: We adjusted our Pulse Width Modulation (PWM) signals to account
 
 Voltage Sag: Documented the correlation between battery discharge and motor RPM, implementing a "battery compensation" factor in our motor control code.
 
-Chassis Rigidity: The switch to a 3D-printed frame allowed for a lower center of gravity, reducing "body roll" which previously caused camera feed instability.
+Chassis Rigidity: The switch to a 3D-printed frame allowed for a lower center of gravity, reducing "body roll" which had previously caused camera feed instability.
 
 
 
