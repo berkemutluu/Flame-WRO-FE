@@ -6,6 +6,8 @@ Welcome to the official repository for Flame. This project documents the develop
 
 ## Current Progress
 
+We have released our wall tracking code on 7th of May. This code utilizes opencv to capture video and a "wall detection" algoritihm along with red and green obstacle detection capability. We have selected region of interests to crop the camera feed in half to avoid unwanted detections. The web interface of the pi uses flask to create a dashboard to see the live camera feed and to calibrate speed, colors and sensitivity. According to this the pi sends serial commands through the usb interface to the arduino, activating and driving the main motor and servo. The control logic uses a proportional_derivative codebase. Steering of the robot is proportional to the error of the robot.
+
 On the 5th of May; we have put together our robots chassis with the electronics, sensor, motors, differential and steering systems. (We might reevaluate and possibly change these in the future.) We are currently working on the coding of our arduino board and pi's opencv modulation.
 
 <img width="3024" height="4032" alt="image" src="https://github.com/user-attachments/assets/360d959e-3e3d-440a-b051-244e34ad4edb" />
