@@ -6,6 +6,11 @@ Welcome to the official repository for Flame. This project documents the develop
 
 ## Current Progress
 
+Because of some compability issues between the clone arduino uno and raspberry pi, we have decided to change to an original arduino nano. The clone arduino ran at 16 mHz with 8-bit architecture compared with 48mHz and 32-bit processor. This significantly solved our problems of latency between the wall detection and the steering+driving output. 
+
+<img width="1200" height="1600" alt="WhatsApp Image 2026-05-09 at 12 30 58" src="https://github.com/user-attachments/assets/a729a93e-756a-40dd-9546-3b01f5968b09" />
+
+
 We have released our wall tracking code on 7th of May. This code utilizes opencv to capture video and a "wall detection" algoritihm along with red and green obstacle detection capability. We have selected region of interests to crop the camera feed in half to avoid unwanted detections. The web interface of the pi uses flask to create a dashboard to see the live camera feed and to calibrate speed, colors and sensitivity. According to this the pi sends serial commands through the usb interface to the arduino, activating and driving the main motor and servo. The control logic uses a proportional_derivative codebase. Steering of the robot is proportional to the error of the robot.
 
 On the 5th of May; we have put together our robots chassis with the electronics, sensor, motors, differential and steering systems. (We might reevaluate and possibly change these in the future.) We are currently working on the coding of our arduino board and pi's opencv modulation.
@@ -51,15 +56,17 @@ Power Input: USB-C Power Cable with Integrated Switch (Type-C)
 
 Display Interface: Micro HDMI to HDMI Cable (1.5m)
 
+Second Controller: ~~Arduino Uno r3 (clone)~~ (For the drivetrain and sensors) Changed to a arduino nano r4 for latency issues.
+
 ### 2. Perception & Sensing
 
 Primary Camera: Raspberry Pi Camera Module 3 (Wide Angle)
 
 Camera Connection: Standard-to-Mini Camera Ribbon Cable (20cm)
 
-Inertial Measurement: MPU6050 6-Axis Accelerometer and Gyroscope Sensor (2 units)
+Inertial Measurement: MPU6050 6-Axis Accelerometer and Gyroscope Sensor 
 
-Object Detection: HC-SR04 Ultrasonic Distance Sensors (2 units)
+Object Detection: HC-SR04 Ultrasonic Distance Sensors (3 units)
 
 Color Detection: TCS3200 Color Recognition Sensor Module
 
@@ -93,7 +100,7 @@ DC Barrel Jack with Terminal Block
 
 Wiring: * 14 AWG High-Flex Silicone Wire (Red and Black)
 
-Rapid Wire Connection Kit (55 pieces)
+~~Rapid Wire Connection Kit (55 pieces)~~ We decided to ditch this in favor of soldering. These WAGO connectors really save time and effort when connecting components, but takes up a lot of space. Also, it was nearly impossible to tidy our wires with these connectores attached.
 
 Management: Cable Tie/Zip Tie Set
 
