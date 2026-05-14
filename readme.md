@@ -6,7 +6,9 @@ Welcome to the official repository for Flame. This project documents the develop
 
 ## Current Progress
 
-Because of some compability issues between the clone arduino uno and raspberry pi, we have decided to change to an original arduino nano. The clone arduino ran at 16 mHz with 8-bit architecture compared with 48mHz and 32-bit processor. This significantly solved our problems of latency between the wall detection and the steering+driving output. 
+As of 14th of May, we have finished the code of the open round. We have recorded a good amount of accuracy and the robot functions as expected. We have now moved on to the obstacle round.
+
+Because of some compability issues between the clone arduino uno and raspberry pi, we have decided to change to an original arduino nano r4. The clone arduino ran at 16 mHz with 8-bit architecture compared with the new nano, 48mHz and 32-bit processor. This significantly solved our problems of latency between the wall detection and the steering+driving output. 
 
 <img width="1200" height="1600" alt="WhatsApp Image 2026-05-09 at 12 30 58" src="https://github.com/user-attachments/assets/a729a93e-756a-40dd-9546-3b01f5968b09" />
 
@@ -112,6 +114,21 @@ M2 Screws and Nuts (8mm)
 
 M4 Screws (6mm & 12mm), Washers, and Nuts
 
+### 7. 3D-Printed Parts
+
+Our robot has a total of 3 pieces which are 3d printed. Theses are:
+
+the chassis, 
+
+MG90s servo to lego adapter
+
+and our JGB37-520 motor to lego adapter. 
+Developing these parts took a lot of trial and error mainly because of tolerances. The printed parts did not expecatations, mainly because of durability reasons, but we have fixed this by increasing the infill rate of our adapters. This way we could combine the high-quality and durable lego parts with our motors.
+
+<img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/241b9292-bb0e-4605-a3a8-7be53221bdcd" />
+<img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/e8099160-08ab-4de4-947d-09be8c982bc4" />
+
+
 ## Software Architecture
 The software is primarily written in Python, leveraging the following libraries:
 
@@ -134,13 +151,21 @@ Action: Pulse Width Modulation (PWM) signals are sent to the motors via DRV8874.
 ## Repository Structure
 Plaintext
 ├── src/                # Core source code (Python scripts)
+
 │   ├── main.py         # Entry point for the robot
+
 │   ├── vision.py       # OpenCV lane and object detection
+
 │   └── control.py      # PID and motor logic
+
 ├── models/             # Trained AI models for sign recognition
+
 ├── hardware/           # 3D models (STL) and circuit diagrams
+
 ├── docs/               # Engineering journals and photos
+
 └── README.md
+
 ## Setup and Installation
 To run the code locally for testing or on your robot:
 
