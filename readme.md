@@ -44,7 +44,9 @@ Traffic Sign Recognition: Utilizing a trained model to identify the folowing bas
 
 ## Bill of Materials (BOM)
 
-<img width="468" height="302" alt="circuit" src="https://github.com/user-attachments/assets/1e754c98-d8fd-4c4a-a1cb-7f15a5ce931d" />
+<img width="975" height="722" alt="WRO Schematic" src="https://github.com/user-attachments/assets/486fa8f0-4040-46df-8224-3d5821d0667d" />
+
+
 
 ### 1. Computing & Control
 
@@ -208,6 +210,10 @@ Outcome: Unsuccessful. * Reasoning: While easy to prototype, the N20 motors lack
 
 ### Phase 2: Custom High-Torque Build
 
+Preliminary Circuit Version:
+
+<img width="468" height="302" alt="circuit" src="https://github.com/user-attachments/assets/1e754c98-d8fd-4c4a-a1cb-7f15a5ce931d" />
+
 Chassis: Custom 3D-printed rigid chassis for better weight distribution and sensor mounting.
 
 Motor: JGB37-520 High-Torque DC Motor (Rated for 12V, 1590 RPM).
@@ -229,4 +235,4 @@ Chassis Rigidity: The switch to a 3D-printed frame allowed for a lower center of
 
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
