@@ -1,0 +1,12 @@
+[Unit]
+Description=Run WRO vehicle runtime
+After=multi-user.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/program/onboard
+ExecStart=/usr/bin/python3 /home/pi/program/onboard/robot_runtime.py --pillars
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
