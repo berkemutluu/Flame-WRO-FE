@@ -1110,8 +1110,8 @@ What this interface is used for:
 
 ## Demonstration Videos
 
-- Open Round:
-- Obstacle Round:
+- [Open Round](https://www.youtube.com/watch?v=1qHGB5fsv-U)
+- [Obstacle Round](https://www.youtube.com/watch?v=iaR4ZIck9D)
 
 
 
