@@ -1,0 +1,31 @@
+{
+  "name": "flame-wro-fe",
+  "version": "1.0.0",
+  "description": "Flame WRO FE Raspberry runtime and Arduino output proxy sources",
+  "license": "Apache-2.0",
+  "files": [
+    "raspySrc/**/*",
+    "arduino/outputProxy/**/*",
+    "index.js",
+    "readme.md",
+    "LICENSE"
+  ],
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/berkemutluu/Flame-WRO-FE.git"
+  },
+  "bugs": {
+    "url": "https://github.com/berkemutluu/Flame-WRO-FE/issues"
+  },
+  "homepage": "https://github.com/berkemutluu/Flame-WRO-FE#readme",
+  "scripts": {
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "keywords": [
+    "wro",
+    "robotics",
+    "raspberry-pi",
+    "arduino"
+  ]
+}
