@@ -28,8 +28,8 @@
     - [Dependencies](#dependencies) 
     - [Repository Layout](#repository-layout)
     - [Code Installation and Run Guide](#code-installation-and-run-guide)
-    - [Open Challenge](#opening-race)
-    - [Obstacle Challenge](#obstacle-race)
+    - [Open Challenge](#open-challenge)
+    - [Obstacle Challenge](#obstacle-challenge)
 6. [System Thinking and Engineering Decisions](#system-thinking-and-engineering-decisions)
 7. [Utilities](#utilities) 
     - [Failsafe Mechanisms](#failsafe)
@@ -643,7 +643,7 @@ Use this sequence on a Raspberry Pi 5 + Arduino Nano setup.
   
 ---  
   
-<a name="opening-race"></a>  
+<a name="open-challenge"></a>  
   
 ## Open Challenge  
   
@@ -675,7 +675,7 @@ The code stops through the state machine, not through a separate lap tracker. `S
   
 ---  
   
-<a name="obstacle-race"></a>  
+<a name="obstacle-challenge"></a>  
   
 ## Obstacle Challenge  
   
