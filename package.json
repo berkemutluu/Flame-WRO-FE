@@ -7,7 +7,7 @@
     "raspySrc/**/*",
     "arduino/outputProxy/**/*",
     "index.js",
-    "readme.md",
+    "README.md",
     "LICENSE"
   ],
   "main": "index.js",
