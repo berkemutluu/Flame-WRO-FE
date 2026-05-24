@@ -369,7 +369,11 @@ However, gyroscopes tend to drift, when mounted on moving vehicles, that is why 
 
 ### Camera
 
-We wanted to use a high quality camera, which has a wide angle of view and is compatible with OpenCV. The native Raspberry Pi Camera 3 suited all of our needs, on paper. In reality despite it being a wide angle camera, it was not enough for the obstacle round. The objects did not sometimes appear on the camera view, which causes problems. To solve this we tried using clip-on smartphone wide angle lenses.
+We wanted to use a high quality camera, which has a wide angle of view and is compatible with OpenCV. The native Raspberry Pi Camera 3 suited all of our needs, on paper. In reality despite it being a wide angle camera, it was not enough for the obstacle round. The objects did not sometimes appear on the camera view, which causes problems. 
+
+To solve this, we added a **0.45x wide-angle 37mm clip-on lens** in front of the Raspberry Pi Camera 3 module. This lens increases the visible area in front of the robot, especially at close range where obstacle pillars were previously leaving the frame. With the wider field of view, near-edge obstacle detection became more reliable and gave the control loop earlier visual input for steering decisions.
+
+<img width="3024" height="4032" alt="front" src="https://github.com/user-attachments/assets/4ee8eabc-229a-4434-9c35-396a4a46bb8e" />
 
 
 <img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/0df834c9-d58f-4b4f-a553-fae66bace537" />
