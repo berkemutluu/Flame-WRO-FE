@@ -1,5 +1,5 @@
 {
-  "name": "flame-wro-fe",
+  "name": "@berkemutluu/flame-wro-fe",
   "version": "1.0.0",
   "description": "Flame WRO FE Raspberry runtime and Arduino output proxy sources",
   "license": "Apache-2.0",
@@ -20,7 +20,8 @@
   },
   "homepage": "https://github.com/berkemutluu/Flame-WRO-FE#readme",
   "scripts": {
-    "pack:dry-run": "npm pack --dry-run"
+    "pack:dry-run": "npm pack --dry-run",
+    "publish:github": "npm publish --registry=https://npm.pkg.github.com --access public"
   },
   "keywords": [
     "wro",
