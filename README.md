@@ -885,7 +885,7 @@ Supported commands:
 ### Section 4 — Actuator execution phase
 
 - `driveMotor(int speed)` clamps to `-255..255`
-- Positive = forward PWM, negative = reverse PWM, zero = stop
+- Positive = forward PWM, negative = reverse PWM, zero = active brake (`stopMotor()` sets both motor direction pins HIGH)
 - `steer(int absoluteAngleDeg)` clamps to `15..165` and maps to `544..2400 us`
 
 ### Arduino Command Processing Flow
