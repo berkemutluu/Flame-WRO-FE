@@ -436,7 +436,7 @@ Motor Driver: DRV8874 Single Brushed DC Motor Driver Carrier
 
 Battery: 3300mAh 7.4V 2S Li-Po Battery (2 units)
 
-Voltage Regulation (Step-Down): * XL4016 High-Power DC-DC Buck Converter (5A)
+Voltage Regulation (Step-Down): XL4016 High-Power DC-DC Buck Converter (5A)
 
 LM2596 DC-DC Buck Converter (3A)
 
@@ -446,13 +446,13 @@ Specialty Power: USB-C QC4.0/QC3.0 Fast Charging Module (6V-35V Input)
 
 ### 5. Wiring & Connectivity
 
-Connectors: * XT60 Male Connection Cables (12AWG)
+Connectors: XT60 Male Connection Cables (12AWG)
 
 XT60 to Banana Plug Adapter Cable
 
 DC Barrel Jack with Terminal Block
 
-Wiring: * 14 AWG High-Flex Silicone Wire (Red and Black)
+Wiring: 14 AWG High-Flex Silicone Wire (Red and Black)
 
 ~~Rapid Wire Connection Kit (55 pieces)~~ We decided to ditch this in favor of soldering. These WAGO connectors really save time and effort when connecting components, but takes up a lot of space. Also, it was nearly impossible to tidy our wires with these connectores attached.
 
@@ -460,7 +460,7 @@ Management: Cable Tie/Zip Tie Set
 
 ### 6. Mechanical Hardware
 
-Fasteners: * Assorted Screw and Nut Set (200 pieces)
+Fasteners: Assorted Screw and Nut Set (200 pieces)
 
 M2 Screws and Nuts (8mm)
 
@@ -637,9 +637,7 @@ Use this sequence on a Raspberry Pi 5 + Arduino Nano setup.
      - `journalctl -u vehicle-runtime.service -f`  
    - The service runs `python3 /home/pi/program/raspy/robot_runtime.py --pillars` with working directory `/home/pi/program/raspy`.  
   
-### WRO Start-Button Status  
-  
-The WRO 2026 start procedure requires the vehicle to be switched on, wait, and then start after one start-button action. The current software does **not** implement a GPIO or physical start-button wait. `RobotRunner.start()` connects the Arduino and starts the camera; after launch, the main loop begins immediately. For WRO runs, this needs either an external launch procedure accepted by the event setup or a future code change that adds the required waiting state and start input.  
+
   
 ---  
   
@@ -697,9 +695,6 @@ The WRO 2026 Obstacle Challenge adds red and green pillars as traffic signs. The
   
 7. **Return to center:** After `behavior.pillar_avoid_seconds`, the state machine returns to `PD-CENTER` and enforces a cooldown before another avoid decision.  
   
-### Parking Status  
-  
-`vision_pipeline.Pipeline` includes `filter_parking`, which can create a pink parking-lot mask. That helper is not currently used by `RobotRunner.cycle`, `StateMachine`, or the output decision path. Autonomous parking and parking-stop behavior are therefore not implemented in the current runtime.  
   
 ---  
   
