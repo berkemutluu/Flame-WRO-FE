@@ -1,0 +1,198 @@
+{
+  "version": 2,
+  "filters": {
+    "GRAY": 56,
+    "WALL_MAX_SAT": 102,
+    "WALL_EXCLUDE_COLORS": true,
+    "WALL_EXCLUDE_DILATE": 1,
+    "REDLO": [
+      111,
+      149,
+      48
+    ],
+    "REDHI": [
+      130,
+      239,
+      167
+    ],
+    "GREENLO": [
+      51,
+      66,
+      33
+    ],
+    "GREENHI": [
+      73,
+      171,
+      136
+    ],
+    "ORANGELO": [
+      98,
+      0,
+      88
+    ],
+    "ORANGEHI": [
+      118,
+      234,
+      208
+    ],
+    "BLUELO": [
+      173,
+      0,
+      54
+    ],
+    "BLUEHI": [
+      14,
+      255,
+      240
+    ],
+    "PINKLO": [
+      158,
+      160,
+      100
+    ],
+    "PINKHI": [
+      170,
+      255,
+      255
+    ]
+  },
+  "contours": {
+    "minSize": 80.0,
+    "pillar_morph_kernel": 5,
+    "pillar_min_width": 4,
+    "pillar_min_height": 8,
+    "pillar_min_fill_ratio": 0.18
+  },
+  "camera": {
+    "frame_width": 640,
+    "frame_height": 400,
+    "format": "RGB888",
+    "crop_height": 190,
+    "flip_180": true,
+    "awb_enable": false,
+    "mtx": [
+      [
+        495.44408865,
+        0.0,
+        294.45510998
+      ],
+      [
+        0.0,
+        504.36905411,
+        259.77204181
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "dist": [
+      [
+        -0.64066312,
+        0.41901729,
+        -0.00366722,
+        0.01957175,
+        -0.14404429
+      ]
+    ]
+  },
+  "roi": {
+    "line": {
+      "x": 270,
+      "y": 180,
+      "w": 100,
+      "h": 30
+    },
+    "left_wall": {
+      "x": 0,
+      "y": 0,
+      "w": 100,
+      "h": 150
+    },
+    "right_wall": {
+      "x": 540,
+      "y": 0,
+      "w": 100,
+      "h": 150
+    }
+  },
+  "pd": {
+    "kp": 4.5,
+    "kd": 8.0,
+    "target_black_portion": 0.45
+  },
+  "control": {
+    "speed": 160,
+    "turn_speed": 155,
+    "avoid_speed": 115,
+    "done_sleep_seconds": 1.0,
+    "max_correction": 1,
+    "max_steering_offset": 75,
+    "steering_sign": -1,
+    "drive_sign": -1,
+    "servo_center_deg": 90,
+    "servo_min_deg": 15,
+    "servo_max_deg": 165
+  },
+  "behavior": {
+    "pillars": true,
+    "turns": 120,
+    "fixed_round_dir": 0,
+    "round_dir_vote_threshold": 10,
+    "line_marker_min_portion": 0.25,
+    "turn_delay_seconds": 0,
+    "pillar_turn_delay_seconds": 0.1,
+    "turn_timeout_seconds": 1.1,
+    "state_hold_seconds": 0.25,
+    "finish_delay_seconds": 1.5,
+    "pillar_track_area": 600,
+    "pillar_avoid_area": 2800,
+    "pillar_avoid_cooldown_seconds": 0.55,
+    "pillar_avoid_seconds": 2.2,
+    "pillar_first_phase_seconds": 0.85,
+    "pillar_red_first_correction": 0.95,
+    "pillar_red_second_correction": -0.72,
+    "pillar_green_first_correction": -0.95,
+    "pillar_green_second_correction": 0.72,
+    "pillar_wall_guard": true,
+    "pillar_wall_guard_threshold": 0.62,
+    "pillar_wall_guard_correction": 1.0,
+    "pillar_area_ema_alpha": 0.5,
+    "pillar_lost_hold_frames": 4,
+    "pillar_match_max_dx": 90,
+    "pillar_track_confirm_frames": 1,
+    "pillar_avoid_confirm_frames": 1
+  },
+  "serial": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "auto_detect": true,
+    "baud_rate": 9600,
+    "ready_timeout_seconds": 6.0,
+    "write_timeout_seconds": 1.0,
+    "send_interval_seconds": 0.02,
+    "keepalive_interval_seconds": 0.15
+  },
+  "web": {
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 5000
+  },
+  "decision_log": {
+    "enabled": true,
+    "path": "decision_log.jsonl",
+    "cycle_interval_seconds": 0.25
+  },
+  "debug": {
+    "log_every_seconds": 0.5,
+    "preview_masks": true,
+    "sample_radius": 4,
+    "sample_hue_margin": 8,
+    "sample_sv_margin": 35,
+    "sample_gray_margin": 18,
+    "save_frames": false,
+    "frame_dir": "debug_frames",
+    "frame_every_seconds": 1.0
+  }
+}
