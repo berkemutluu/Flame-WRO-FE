@@ -416,6 +416,8 @@ Primary Camera: Raspberry Pi Camera Module 3 (Wide Angle)
 
 Camera Connection: Standard-to-Mini Camera Ribbon Cable (20cm)
 
+Camera Lens: 0.45x 37mm clip-on Lens
+
 Inertial Measurement: MPU6050 6-Axis Accelerometer and Gyroscope Sensor 
 
 Object Detection: HC-SR04 Ultrasonic Distance Sensors (3 units)
