@@ -73,7 +73,7 @@ Initially, we built a frame using LEGO components and N20 Micro Gear Motor with 
 From this phase, we took note of what we need to improve:
 
 - Soldering, instead of WAGO Connectors
-    - These WAGO connectors really save time and effort when connecting components, but takes up a lot of unnecessary space. Also, it was nearly impossible to tidy our wires with these connectores attached.
+    - These WAGO connectors really save time and effort when connecting components, but takes up a lot of unnecessary space. Also, it was nearly impossible to tidy our wires with these connectors attached.
 - Chassis flex and play at joints: under acceleration and cornering, small connection tolerances introduced steering drift.
 - Limited packaging freedom: fixed LEGO geometry made it hard to place electronics and sensors exactly where we wanted.
 - Center-of-mass inconsistency: battery and board placement options were limited, which affected balance between runs.
