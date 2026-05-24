@@ -137,7 +137,7 @@ Second Version - 3D printed; with more structural stability which includes addit
 <img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/b74691da-ce36-4690-867a-ed94beefef7c" />
 
 
-For more sketches of the chassis please visit the [3d-print files](https://github.com/berkemutluu/WRO-Readme/tree/main/3d-print%20files)
+For more sketches of the chassis please visit the [3d-print files](./3d-print%20files/)
 
 
 ### Tires:
