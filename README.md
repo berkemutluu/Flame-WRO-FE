@@ -481,664 +481,720 @@ Developing these parts took a lot of trial and error mainly because of tolerance
 <img width="4032" height="3024" alt="image" src="https://github.com/user-attachments/assets/e8099160-08ab-4de4-947d-09be8c982bc4" />
 
 
+<a name="software"></a>  
+  
+# Software  
+  
+<a name="software-development"></a>  
+  
+## Software Development  
+  
+The software is split into two controllers that cooperate during every driving cycle:  
+  
+1. **Raspberry Pi 5 (`raspy/robot_runtime.py`, Python)**  
+   - Captures frames from the Raspberry Pi camera with `picamera2`  
+   - Uses OpenCV/NumPy to crop the camera view, detect wall masks, floor markers, and red/green pillars  
+   - Runs the driving state machine and computes steering/speed decisions  
+   - Hosts the live preview, configuration, calibration, status, and manual-test web interface  
+   - Writes decision records to one JSONL log file for review after a run  
+   - Sends compact serial commands to the actuator controller  
+2. **Arduino Nano (`arduino_outputProxy/drive_bridge/src/main.cpp`, C++ / Arduino framework)**  
+   - Receives `STEER`, `DRIVE`, and `STOP` commands over USB serial  
+   - Drives the steering servo with bounded absolute angles  
+   - Drives the DC motor through the configured H-bridge pins with ramp limiting and timeout stop  
+   - Keeps low-level actuator timing separate from Linux scheduling on the Pi  
+  
+The Pi makes the navigation decisions; the Arduino executes low-latency hardware actions. The WRO 2026 rules require the vehicle to drive autonomously, follow the randomly chosen round direction, complete three laps, and in the obstacle challenge pass red pillars on the right and green pillars on the left. The software is organized around those decisions.  
+  
+### Libraries Used in Runtime Files  
+  
+#### `arduino_outputProxy/drive_bridge/src/main.cpp` (Arduino/C++)  
+- `Arduino.h`  
+- `Servo.h`  
+  
+#### `raspy/robot_runtime.py` and modules (Python)  
+- Standard library: `argparse`, `glob`, `json`, `os`, `threading`, `time`, `http.server`  
+- Third-party: `cv2` (OpenCV), `numpy`  
+- Optional/hardware-specific: `serial` (pyserial), `picamera2`  
+  
+<a name="programming-languages"></a>  
+  
+### Programming Languages  
+  
+| Controller | Language | IDE / Toolchain |  
+|---|---|---|  
+| Raspberry Pi 5 | Python 3 | Visual Studio Code / terminal |  
+| Arduino Nano | C++ (Arduino framework) | PlatformIO / Arduino toolchain |  
+  
+We chose **Python** for the Pi because OpenCV and Picamera2 make camera-based tuning fast. **C++** on the Arduino is used for bounded, deterministic servo and motor output.  
+  
+<a name="dependencies"></a>  
+  
+### Dependencies  
+  
+**Raspberry Pi (Python):**  
+  
+| Package | Version / Notes | Purpose |  
+|---|---|---|  
+| `opencv-python` (`cv2`) | 4.x | Color masks, contours, preview overlay, JPEG encoding |  
+| `numpy` | 1.x | Array operations for frame processing |  
+| `pyserial` | 3.x | USB serial communication with Arduino |  
+| `picamera2` | Raspberry Pi OS package | Raspberry Pi camera capture |  
+  
+**Arduino Nano (C++):**  
+  
+| Library | Source | Purpose |  
+|---|---|---|  
+| `Servo.h` | `arduino-libraries/Servo@^1.2.2` | Steering servo PWM control |  
+| `Arduino.h` | Arduino framework | Core hardware access, serial, GPIO, timers |  
+  
+**Build and service tools:**  
+  
+| Tool | Purpose |  
+|---|---|  
+| `platformio` | Build and upload the Arduino firmware |  
+| `systemctl` | Install, enable, start, stop, and inspect the Pi runtime service |  
+  
+### Repository Layout  
+  
+| Path | Purpose |  
+|---|---|  
+| `main.py` | Root launcher that adds `raspy/` to `sys.path` and calls `robot_runtime.main` |  
+| `raspy/robot_runtime.py` | Main Pi runtime, camera loop, serial link, CLI, and `RobotRunner` |  
+| `raspy/vision_pipeline.py` | HSV masks, wall mask extraction, pillar contour detection |  
+| `raspy/vision_types.py` | Shared `Pillar` data object and ROI helper |  
+| `raspy/drive_state.py` | State machine for starting, centering, turning, tracking pillars, avoiding pillars, and done state |  
+| `raspy/lap_direction.py` | Black-wall edge voting used to infer clockwise/counter-clockwise direction |  
+| `raspy/settings.py` / `raspy/settings.json` | Default settings and tuned runtime configuration |  
+| `raspy/control_panel.py` | Built-in HTTP control/configuration dashboard and MJPEG preview |  
+| `raspy/decision_log.py` | Central JSONL decision logger, replaced on each run |  
+| `raspy/install_vehicle_service.sh` | Installs the systemd service file on the Raspberry Pi |  
+| `raspy/vehicle-runtime.service` | systemd unit for starting `robot_runtime.py --pillars` on boot |  
+| `arduino_outputProxy/drive_bridge/src/main.cpp` | Arduino firmware for serial parsing and actuator output |  
+| `arduino_outputProxy/drive_bridge/platformio.ini` | PlatformIO firmware project configuration |  
+  
+### Code Installation and Run Guide  
+  
+Use this sequence on a Raspberry Pi 5 + Arduino Nano setup.  
+  
+1. **Flash the Arduino controller**  
+   - Install PlatformIO if `platformio` is not already available.  
+   - From repository root:  
+     - `cd arduino_outputProxy/drive_bridge`  
+     - `platformio run --target upload`  
+   - The checked-in PlatformIO environment and board are both `nanoatmega328new`.  
+   - Serial monitor speed is `9600`. On startup the Arduino prints `READY`.  
+  
+2. **Prepare Python runtime on Raspberry Pi**  
+   - From repository root:  
+     - `python3 -m venv .venv`  
+     - `source .venv/bin/activate`  
+     - `pip install --upgrade pip`  
+     - `pip install opencv-python numpy pyserial`  
+   - Install `picamera2` from the Raspberry Pi OS packages if it is not already present.  
+   - `robot_runtime.py` imports `cv2` during startup, so even `--print-config` requires OpenCV to be installed.  
+  
+3. **Connect hardware**  
+   - Connect Arduino to Raspberry Pi over USB.  
+   - Confirm Arduino appears as `/dev/ttyACM0` or `/dev/ttyUSB0`; auto-detect is enabled in `raspy/settings.json`.  
+   - Connect and enable the Raspberry Pi camera.  
+  
+4. **Run the robot software**  
+   - From repository root:  
+     - `python3 main.py --pillars`  
+   - Or run the runtime module directly:  
+     - `cd raspy`  
+     - `python3 robot_runtime.py --pillars`  
+   - For a camera run without Arduino output:  
+     - `python3 robot_runtime.py --no-serial --max-frames 20`  
+   - `--no-serial` disables USB command output only; it still needs OpenCV, Picamera2, and an enabled camera.  
+   - The web dashboard is served at `http://<raspberry-pi-ip>:5000/`.  
+  
+5. **Useful runtime options**  
+   - `--config PATH` loads a different settings file  
+   - `--set path=value` overrides one setting, for example `--set control.speed=120`  
+   - `--save-config` writes overrides back to the settings file  
+   - `--print-config` prints the effective configuration and exits  
+   - `--fixed-dir -1|0|1` sets clockwise, auto, or counter-clockwise direction behavior  
+   - `--web` / `--no-web` enables or disables the dashboard  
+  
+6. **Before track runs**  
+   - Verify steering direction, motor direction, and serial port.  
+   - Open `/video_feed` or the dashboard preview and confirm wall, marker, and pillar overlays.  
+   - Use Color Sampling in the dashboard to tune HSV thresholds, then save with **Save Config**.  
+   - Check `raspy/decision_log.jsonl` after a run to review state changes and drive decisions.  
+  
+7. **Optional systemd startup service**  
+   - The service assumes the deployed project is at `/home/pi/program`, so the runtime path is `/home/pi/program/raspy/robot_runtime.py`.  
+   - Copy or sync this repository to `/home/pi/program` before installing the service, or update `raspy/vehicle-runtime.service` to match the deployment path.  
+   - Install the service from the repository checkout on the Pi:  
+     - `raspy/install_vehicle_service.sh`  
+   - Manage it with systemd:  
+     - `sudo systemctl start vehicle-runtime.service`  
+     - `sudo systemctl stop vehicle-runtime.service`  
+     - `sudo systemctl enable vehicle-runtime.service`  
+     - `sudo systemctl status vehicle-runtime.service`  
+     - `journalctl -u vehicle-runtime.service -f`  
+   - The service runs `python3 /home/pi/program/raspy/robot_runtime.py --pillars` with working directory `/home/pi/program/raspy`.  
+  
+### WRO Start-Button Status  
+  
+The WRO 2026 start procedure requires the vehicle to be switched on, wait, and then start after one start-button action. The current software does **not** implement a GPIO or physical start-button wait. `RobotRunner.start()` connects the Arduino and starts the camera; after launch, the main loop begins immediately. For WRO runs, this needs either an external launch procedure accepted by the event setup or a future code change that adds the required waiting state and start input.  
+  
+---  
+  
+<a name="opening-race"></a>  
+  
+## Open Challenge  
+  
+The WRO 2026 Open Challenge has no traffic signs. The vehicle must drive in the randomly selected direction, complete three laps, and stop autonomously according to the round-end rules.  
+  
+### Strategy  
+  
+The implemented strategy is camera-based wall following with color-marker turn detection:  
+  
+1. **Frame preparation:** `PiCamera.capture_bgr` captures an RGB frame, converts it to BGR, rotates it 180 degrees when configured, and `Pipeline.crop` removes the top part of the image using `camera.crop_height`.  
+  
+2. **Wall detection:** `Pipeline.filter_RG_Bl` builds a dark wall mask from grayscale intensity and low HSV saturation. It excludes detected red, green, orange, blue, and pink areas so colored markers do not become wall pixels.  
+  
+3. **Line marker detection:** `Pipeline.filter_OB` builds orange and blue masks inside the configured `roi.line` rectangle. The state machine uses the orange/blue portions to schedule left/right turning states.  
+  
+4. **Round direction:** If `behavior.fixed_round_dir` is `0`, `lap_direction.find_round_dir` votes on wall-edge geometry until `behavior.round_dir_vote_threshold` is reached. A non-zero fixed direction skips the search.  
+  
+5. **PD steering:** In `PD-CENTER`, the controller compares the active wall portion against `pd.target_black_portion`. `pd.kp` and `pd.kd` convert the current error and previous error into a correction value.  
+  
+6. **State machine:** `drive_state.StateMachine` moves through `STARTING`, `PD-CENTER`, scheduled `TURNING-L` / `TURNING-R`, and finally `DONE`. When `turns_left` reaches zero, `DONE` is scheduled after `behavior.finish_delay_seconds`.  
+  
+7. **Output mapping:** The correction is clamped by `control.max_correction`, converted into a servo offset with `control.max_steering_offset`, bounded to `servo_min_deg..servo_max_deg`, and sent with the selected drive speed.  
+  
+### Turn Count and Stop Behavior  
+  
+The code stops through the state machine, not through a separate lap tracker. `StateMachine` initializes `turns_left` from `behavior.turns`, subtracts one when a valid direction-specific orange or blue marker schedules a turn, then schedules `DONE` once `turns_left <= 0`. In `DONE`, `RobotRunner` centers steering and sends zero drive speed.  
+  
+`settings.DEFAULT_CONFIG` uses `behavior.turns = 12`, which matches three laps on a four-section track. The checked-in tuned file `raspy/settings.json` currently uses `behavior.turns = 120`. The file does not label why this value is used, so it should be treated as the current tuned/test configuration, not the WRO three-lap stop value. For an official three-lap run, set `behavior.turns` to `12` or pass `--set behavior.turns=12`.  
+  
+---  
+  
+<a name="obstacle-race"></a>  
+  
+## Obstacle Challenge  
+  
+The WRO 2026 Obstacle Challenge adds red and green pillars as traffic signs. The rules require the robot to pass a red pillar on the right and a green pillar on the left.  
+  
+### Strategy  
+  
+1. **Base navigation:** The obstacle run uses the same wall mask, line-marker logic, direction voting, and PD centering as the Open Challenge.  
+  
+2. **Pillar detection:** `Pipeline.get_pillars` finds red and green contours after median blur and morphological cleanup. Small, narrow, short, or low-fill contours are discarded using the `contours` settings.  
+  
+3. **Pillar stabilization:** `RobotRunner.stabilize_pillars` keeps one closest pillar track, smooths its area with an EMA, requires confirm frames, and can hold a recently lost pillar for a few frames.  
+  
+4. **Ignore check:** A pillar can be ignored when orange or blue marker pixels are found inside the narrow pillar ROI. This avoids treating track markers as traffic pillars.  
+  
+5. **Tracking and avoiding:** In pillar rounds, a confirmed pillar can move the state machine from `PD-CENTER` to `TRACKING-PILLAR`. A larger confirmed pillar changes the state to `AVOIDING-R` for red or `AVOIDING-G` for green.  
+  
+6. **Avoidance correction:** Avoidance uses a first phase and second phase correction (`pillar_red_first_correction`, `pillar_red_second_correction`, `pillar_green_first_correction`, `pillar_green_second_correction`). The wall guard can override this if one wall portion becomes too high.  
+  
+7. **Return to center:** After `behavior.pillar_avoid_seconds`, the state machine returns to `PD-CENTER` and enforces a cooldown before another avoid decision.  
+  
+### Parking Status  
+  
+`vision_pipeline.Pipeline` includes `filter_parking`, which can create a pink parking-lot mask. That helper is not currently used by `RobotRunner.cycle`, `StateMachine`, or the output decision path. Autonomous parking and parking-stop behavior are therefore not implemented in the current runtime.  
+  
+---  
+  
+## Raspberry Pi Software (`raspy/robot_runtime.py`) — Process Sections  
+  
+### Section A — Boot and initialization  
+  
+- Load persisted configuration from `raspy/settings.json`  
+- Merge missing keys from `settings.DEFAULT_CONFIG`  
+- Apply CLI overrides such as `--pillars`, `--fixed-dir`, `--set`, and web options  
+- Initialize `Pipeline`, `StateMachine`, `ArduinoLink`, `PiCamera`, and `DecisionLogger`  
+- Start Arduino serial, camera capture, and the optional web server  
+  
+`settings.ConfigLoader` also accepts a few older configuration keys (`ArduinoSerialPort`, `PD`, and `ROI`) and maps them into the current nested settings structure. New changes should use the current keys shown in `raspy/settings.json`.  
+  
+### Section B — Frame acquisition and preprocessing  
+  
+Per frame, the Pi does the following:  
+  
+1. Capture a frame from Picamera2  
+2. Convert RGB to BGR  
+3. Rotate 180 degrees when `camera.flip_180 = true`  
+4. Crop using `camera.crop_height`  
+5. Convert the cropped image to HSV for color masks  
+  
+### Section C — Vision section  
+  
+`vision_pipeline.Pipeline` produces the lightweight inputs used by the state machine:  
+  
+- Orange and blue marker portions from `roi.line`  
+- Left and right wall portions from `roi.left_wall` and `roi.right_wall`  
+- Red and green pillar candidates from contour area, width, height, and fill ratio  
+- Optional pink parking mask helper (`filter_parking`)  
+  
+### Section D — State and decision section  
+  
+`drive_state.StateMachine` owns the high-level driving state:  
+  
+- `STARTING` waits for a direction or confirmed pillar condition  
+- `PD-CENTER` performs normal wall following  
+- `TRACKING-PILLAR` steers based on pillar x-position  
+- `AVOIDING-R` and `AVOIDING-G` use timed avoidance corrections  
+- `TURNING-L` and `TURNING-R` apply full correction for corner turns  
+- `DONE` forces speed to zero  
+  
+Important behavior settings include:  
+  
+- `line_marker_min_portion` for orange/blue marker detection  
+- `turn_delay_seconds`, `pillar_turn_delay_seconds`, and `turn_timeout_seconds` for turns  
+- `pillar_track_area`, `pillar_avoid_area`, and confirm-frame settings for obstacle behavior  
+- `pillar_wall_guard_threshold` and `pillar_wall_guard_correction` for wall protection during avoidance  
+  
+### Section E — Serial command output  
+  
+`ArduinoLink` sends line-oriented actuator commands:  
+  
+- `STEER:<int>`  
+- `DRIVE:<int>`  
+- `STOP`  
+  
+The port is auto-detected from `/dev/ttyACM*`, `/dev/ttyUSB*`, or pyserial port listing unless auto-detect is disabled. Commands are paced by `send_interval_seconds` and repeated only after `keepalive_interval_seconds` when unchanged.  
+  
+### Section F — Web dashboard/API section  
+  
+The dashboard is served by Python's built-in `ThreadingHTTPServer`:  
+  
+- `GET /` dashboard  
+- `GET /api/status` runtime telemetry  
+- `GET /api/config` active config snapshot  
+- `GET /video_feed` MJPEG stream  
+- `POST /api/config` update one setting path  
+- `POST /api/save` persist settings  
+- `POST /api/command` manual `STEER`, `DRIVE`, or `STOP`  
+- `POST /api/sample`, `/api/apply_sample`, `/api/apply_samples` for color calibration  
+  
+### Section G — Decision logging  
+  
+`decision_log.DecisionLogger` writes newline-delimited JSON to one file. By default this is `raspy/decision_log.jsonl`. The file is opened with write mode on startup, so each run replaces the previous decision log instead of creating timestamped logs.  
+  
+Logged events include:  
+  
+- `session_start` and `session_stop`  
+- `runtime_start` and `runtime_error`  
+- `round_direction_selected`  
+- `state_update`  
+- sampled `drive_output` decisions  
+- `config_update` and `manual_command`  
+  
+Each record stores lightweight inputs, the selected decision/action, and already-computed reasoning values such as wall portions, marker portions, pillar snapshot, correction, PD error, previous error, gain values, vote totals, and manual override status. Raw frames are not written to the decision log.  
+  
+Console status output is separate from the decision log and is controlled by `debug.log_every_seconds`. Optional frame saving is controlled by `debug.save_frames`, `debug.frame_dir`, and `debug.frame_every_seconds`; when enabled, the runtime overwrites `latest.jpg` in the configured debug frame directory instead of storing a full video history.  
+  
+The sections above describe responsibilities by module.  
+The next flowcharts switch perspective from static sections to **runtime execution order**. These show the steps involved from startup to each control decision.  
+  
+### Raspberry Pi High-Level Flow  
+  
+```mermaid  
+flowchart TD  
+    A[Start robot_runtime.py] --> B[Load settings.json and CLI overrides]  
+    B --> C[Init Pipeline and StateMachine]  
+    B --> D[Open decision_log.jsonl replacing old file]  
+    B --> E[Connect Arduino and wait for READY]  
+    E --> F[Start Picamera2]  
+    F --> G{Web enabled}  
+    G -- Yes --> H[Start ThreadingHTTPServer]  
+    G -- No --> I[Skip dashboard]  
+    H --> J[Control cycle]  
+    I --> J  
+    J --> K[Capture crop HSV frame]  
+    K --> L[Build masks and pillars]  
+    L --> M[Update state machine]  
+    M --> N[Compute correction speed servo]  
+    N --> O[Send STEER and DRIVE]  
+    O --> P[Update preview status and decision log]  
+    P --> J  
+```  
+  
+### `RobotRunner.cycle` Detailed Flow  
+  
+```mermaid  
+flowchart TD  
+    A[Capture BGR frame] --> B[Crop and convert to HSV]  
+    B --> C[Measure orange blue marker ROI]  
+    B --> D[Measure left right wall ROIs]  
+    B --> E[Detect and stabilize pillars]  
+    C --> F[StateMachine should_transition_state]  
+    D --> F  
+    E --> F  
+    F --> G{Searching for round direction}  
+    G -- Yes --> H[Add wall-edge direction vote]  
+    G -- No --> I[Keep current direction]  
+    H --> J[Compute correction]  
+    I --> J  
+    J --> K[Map correction to servo angle]  
+    K --> L[Select speed for state]  
+    L --> M{Manual command active}  
+    M -- Yes --> N[Override servo or drive output]  
+    M -- No --> O[Use automatic output]  
+    N --> P[Apply serial output]  
+    O --> P  
+    P --> Q[Update overlay status and logs]  
+```  
+  
+### `StateMachine.should_transition_state` Flow  
+  
+```mermaid  
+flowchart TD  
+    A[Current state and sensor portions] --> B{Scheduled state due}  
+    B -- Yes --> C[Transition to scheduled state]  
+    B -- Blocking wait --> Z[Hold current state]  
+    B -- No --> D{STARTING}  
+    D -- Pillar confirmed --> E[TRACKING-PILLAR]  
+    D -- Direction known --> F[PD-CENTER]  
+    D -- Otherwise --> Z  
+    F --> G{Turns left <= 0}  
+    G -- Yes --> H[Schedule DONE]  
+    G -- No --> I{Pillar round and pillar confirmed}  
+    I -- Track area --> E  
+    I -- Avoid area --> J[AVOIDING-R or AVOIDING-G]  
+    I -- No --> K{Line marker detected}  
+    E --> L{Pillar lost}  
+    L -- Yes --> F  
+    L -- No --> I  
+    J --> M{Avoid timer elapsed}  
+    M -- Yes --> F  
+    M -- No --> Z  
+    K -- Blue with clockwise dir --> N[Schedule TURNING-L]  
+    K -- Orange with counter-clockwise dir --> O[Schedule TURNING-R]  
+    K -- Otherwise --> Z  
+    N --> Z  
+    O --> Z  
+```  
+  
+### `compute_correction` Flow  
+  
+```mermaid  
+flowchart TD  
+    A[State and measured inputs] --> B{State}  
+    B -- TRACKING-PILLAR --> C[Error from pillar x offset]  
+    B -- PD-CENTER --> D[Error from active wall portion]  
+    B -- TURNING-L --> E[Correction -1.0]  
+    B -- TURNING-R --> F[Correction 1.0]  
+    B -- AVOIDING-R --> G[Red avoidance phase correction]  
+    B -- AVOIDING-G --> H[Green avoidance phase correction]  
+    B -- STARTING or DONE --> I[Correction 0.0]  
+    C --> J[PD correction kp error plus kd delta]  
+    D --> J  
+    G --> K{Wall guard active}  
+    H --> K  
+    K -- Wall too close --> L[Use guard correction]  
+    K -- Clear --> M[Use phase correction]  
+    E --> N[Clamp and output]  
+    F --> N  
+    I --> N  
+    J --> N  
+    L --> N  
+    M --> N  
+```  
+  
+---  
+  
+## Arduino Software (`arduino_outputProxy/drive_bridge/src/main.cpp`) — Process Sections  
+  
+### Section 1 — Hardware constants and limits  
+  
+- `SERVO_PIN = 6`  
+- `MOTOR_IN1_PIN = 10`  
+- `MOTOR_IN2_PIN = 9`  
+- Optional `MOTOR_PWM_PIN = 11` for one-PWM/two-direction wiring  
+- Current motor mode: `USE_TWO_PWM_MOTOR_DRIVER = true` and `USE_SOFTWARE_PWM_FOR_TWO_PWM_DRIVER = true`  
+- Physical enable input is currently disabled: `USE_ENABLE_PIN = false`, with `ENABLE_PIN = 7` reserved if enabled later  
+- Steering bounds: `SERVO_MIN_DEG = 15`, `SERVO_CENTER_DEG = 90`, `SERVO_MAX_DEG = 165`  
+- Motor output bound: `MOTOR_MAX_PWM = 200`  
+- Ramp settings: `MOTOR_RAMP_INTERVAL_MS = 20`, `MOTOR_RAMP_STEP = 2`  
+- Command timeout: `COMMAND_TIMEOUT_MS = 1000`  
+- Command line buffer size: `LINE_BUF_SIZE = 64`  
+  
+### Section 2 — Setup phase  
+  
+`setup()` performs deterministic startup:  
+  
+- Configure motor pins and optional enable pin  
+- Attach and center steering servo  
+- Stop motor output  
+- Start serial at `9600`  
+- Emit `READY` after startup delay  
+  
+### Section 3 — Command receive and parse phase  
+  
+`loop()` and `handleCommand` implement a strict parser:  
+  
+1. Read bytes until newline  
+2. Null-terminate the line buffer  
+3. Split `NAME:VALUE` at the colon  
+4. Parse the integer payload with `parseIntStrict`  
+5. Execute only supported commands  
+  
+Supported commands:  
+  
+- `STOP`  
+- `STEER:<int>`  
+- `DRIVE:<int>`  
+  
+### Section 4 — Actuator execution phase  
+  
+- `writeSteering` clamps absolute servo angle to `15..165`  
+- `writeMotorPwm` clamps speed to `-200..200`  
+- `updateMotorRamp` moves `currentSpeed` toward `targetSpeed` in small steps  
+- If no valid command arrives for `1000 ms`, target speed returns to zero  
+- If `USE_ENABLE_PIN` is enabled and the input is not active, motor target speed is forced to zero  
+  
+### Arduino Command Processing Flow  
+  
+```mermaid  
+flowchart TD  
+    A[Serial byte received] --> B{Is newline}  
+    B -- No --> C[Append to line buffer]  
+    B -- Yes --> D[Null terminate line]  
+    D --> E[handleCommand]  
+    E --> F{STOP command}  
+    F -- Yes --> G[Center steering and stop motor]  
+    F -- No --> H[Parse name and value]  
+    H --> I{Valid integer value}  
+    I -- No --> J[Print ERR:VALUE]  
+    I -- Yes --> K{STEER or DRIVE}  
+    K -- STEER --> L[Clamp and write steering angle]  
+    K -- DRIVE --> M[Set bounded target speed]  
+    K -- Other --> N[Print ERR:COMMAND]  
+```  
+  
+### `updateMotorRamp` Flow  
+  
+```mermaid  
+flowchart TD  
+    A[Current speed and target speed] --> B{20 ms elapsed}  
+    B -- No --> C[Keep current output]  
+    B -- Yes --> D{current < target}  
+    D -- Yes --> E[Increase by ramp step]  
+    D -- No --> F{current > target}  
+    F -- Yes --> G[Decrease by ramp step]  
+    F -- No --> H[No speed change]  
+    E --> I[writeMotorPwm]  
+    G --> I  
+    H --> I  
+```  
+  
+### `writeMotorPwm` Flow  
+  
+```mermaid  
+flowchart TD  
+    A[Input speed] --> B[Clamp to -200..200]  
+    B --> C{Outputs enabled}  
+    C -- No --> D[Force speed 0]  
+    C -- Yes --> E{Two PWM driver}  
+    E -- Software PWM --> F[Store outputSpeed for software PWM loop]  
+    E -- Hardware PWM --> G[Analog write one motor pin]  
+    E -- One PWM driver --> H[Set direction pins and PWM pin]  
+    D --> I[Motor pins low]  
+    F --> J[updateSoftwareMotorPwm drives duty cycle]  
+    G --> K[Motor output updated]  
+    H --> K  
+```  
+  
+---  
+  
+## Raspberry Pi ↔ Arduino Runtime Interaction  
+  
+```mermaid  
+sequenceDiagram  
+    participant Cam as Camera  
+    participant Pi as Raspberry Pi robot_runtime.py  
+    participant Log as decision_log.jsonl  
+    participant Ard as Arduino drive_bridge  
+    Cam->>Pi: RGB frame  
+    Pi->>Pi: Vision masks, state machine, correction  
+    Pi->>Log: State and drive decision records  
+    Pi->>Ard: STEER:<angle>  
+    Pi->>Ard: DRIVE:<speed>  
+    Ard->>Ard: Servo and motor ramp execution  
+    Pi->>Pi: Update status and video feed  
+```  
+  
+1. The camera streams frames into Pi-side perception/control code.  
+2. Pi converts each frame into steering angle and drive speed decisions.  
+3. Those decisions are logged as lightweight JSONL records and sent to Arduino over USB serial at `9600` baud.  
+4. Arduino parses complete command lines, validates payloads, and updates actuator outputs.  
+5. In parallel, Pi publishes status, configuration, calibration controls, and MJPEG video for operators.  
+  
+---  
+  
+## System Thinking and Engineering Decisions  
+  
+This section documents the key software constraints, tradeoffs, and risks that shaped the current implementation.  
+  
+### Constraints  
+  
+| Constraint | Value / Limit | Impact |  
+|---|---|---|  
+| WRO 2026 start procedure | Robot is switched on, waits, then starts after one start action | Current runtime starts immediately after launch; physical start-button wait is not implemented yet |  
+| Round direction | Randomly chosen before each challenge round | Direction can be fixed with CLI/config or inferred by wall-edge voting |  
+| Challenge length | Open and Obstacle rounds are three minutes | Runtime keeps decisions lightweight and avoids storing raw frames by default |  
+| Obstacle rule | Red on right, green on left | State machine has color-specific avoid states and correction values |  
+| Actuator timing | Linux is not deterministic for PWM | Arduino owns servo and motor output |  
+| Tuning under venue lighting | HSV thresholds move with lighting | Web sampling updates color ranges without reflashing firmware |  
+  
+### Tradeoffs and Decisions  
+  
+#### Pi-only control vs. Pi + Arduino split  
+The Pi has enough processing power for camera vision, but Linux timing is not the right place to generate direct motor/servo output. We keep perception and planning on the Pi and move low-level actuator execution to Arduino over a small serial protocol.  
+  
+#### Fixed direction vs. automatic direction voting  
+The challenge direction is known before each round, so `--fixed-dir` can be used when we want deterministic setup. The automatic mode remains useful for testing because `lap_direction.find_round_dir` can vote from wall-edge geometry until the configured threshold is reached.  
+  
+#### Raw-data logging vs. decision logging  
+The system logs decisions instead of full camera frames. This keeps one readable `decision_log.jsonl` per run with the inputs and reasoning values needed to debug state transitions, without filling storage with video data.  
+  
+#### Dashboard framework choice  
+The dashboard uses `ThreadingHTTPServer` instead of Flask. The UI is a single embedded HTML page with JSON endpoints, which keeps the runtime dependency set small on the Raspberry Pi.  
+  
+### Risk Identification and Mitigation  
+  
+| Risk | Likelihood | Mitigation |  
+|---|---|---|  
+| Serial port changes between boots | Medium | Auto-detect `/dev/ttyACM*`, `/dev/ttyUSB*`, then pyserial port listing |  
+| Arduino receives stale commands | Medium | Firmware forces target speed to zero after `COMMAND_TIMEOUT_MS` |  
+| Pillar detection flickers | Medium | EMA area smoothing, confirm frames, and lost-frame hold |  
+| Colored floor markers pollute wall mask | Medium | Wall mask excludes detected red, green, orange, blue, and pink pixels |  
+| Venue lighting changes HSV thresholds | High | Browser-based color sampling updates filter ranges and saves settings |  
+| Decision behavior is hard to review after a run | Medium | Central JSONL decision log records state changes and sampled drive outputs |  
+  
+### Tests && Decisions  
+  
+To make the current software decisions reproducible, we keep the values that most affect behavior in `raspy/settings.json`:  
+  
+| Decision area | Setting / file | Current value or behavior | Reason |  
+|---|---|---|---|  
+| Camera crop | `camera.crop_height` | `190` | Process only the lower track area used for driving |  
+| Drive speeds | `control.speed`, `turn_speed`, `avoid_speed` | `160`, `155`, `115` | Slow down during obstacle handling while keeping normal pace higher |  
+| Steering bounds | `servo_min_deg`, `servo_center_deg`, `servo_max_deg` | `15`, `90`, `165` | Protect steering hardware and keep command mapping predictable |  
+| Direction behavior | `behavior.fixed_round_dir` | `0` | Use automatic direction search unless set for a round |  
+| Marker threshold | `line_marker_min_portion` | `0.25` | Require a clear orange/blue marker signal before turn scheduling |  
+| Pillar avoid trigger | `pillar_avoid_area` | `2800` | Avoid only when the pillar is close and confirmed |  
+| Decision logging | `decision_log.path` | `decision_log.jsonl` | Replace one log file per run for simple review |  
+  
+  
+---  
+  
+<a name="utilities"></a>  
+   
+   
+## Utilities  
+   
+   
+<a name="failsafe"></a>  
+   
+   
+### Failsafe Mechanisms  
+   
+We implemented multiple layers of failsafe protection to prevent hardware damage and ensure safe competition runs.  
+   
+#### Hardware Failsafes  
+   
+**Wire color-coding:**  
+We wrapped wires with colored tape so that every wire belonging to the same subsystem shares the same color. This reduces reconnection errors when disassembling and reassembling the robot between rounds. During early testing, an unlabeled wire became detached and was difficult to trace; after introducing color coding, this type of error has not recurred.  
+   
+**Low-voltage indicator:**  
+The LM2596 step-down module (5 V sensor rail) has an onboard LED that dims when input voltage falls below ~7.5 V. This gives us a visual warning that the LiPo cell is approaching its minimum safe voltage before the servo response degrades. We also keep a spare charged battery pack ready so we can swap within the pit stop window.  
+   
+**Servo mechanical limits:**  
+The steering servo is constrained in firmware to an absolute range of 15°–165°. This prevents a software error from issuing a command that would physically damage the servo linkage or lego steering module.  
+   
+**Motor driver protection:**  
+The DRV8874 provides overcurrent shutdown and thermal protection. If the motor stalls or the robot jams against a wall, the driver enters protection mode rather than burning the motor or wiring.  
+   
+#### Software Failsafes  
+   
+**Done-state stop:**  
+When the state machine reaches `DONE`, the Pi centers the steering and sends zero drive speed. This keeps the vehicle from continuing after the configured turn count is complete.  
+   
+**Arduino speed ramp limiter:**  
+The Arduino changes motor output by `MOTOR_RAMP_STEP = 2` every `MOTOR_RAMP_INTERVAL_MS = 20`. This prevents sudden torque spikes that could cause the chassis to lose traction or cause the motor adapter to slip.  
+   
+**Serial command validation:**  
+The Arduino parser only executes commands that match the expected format (`NAME:VALUE` with a valid integer). Malformed or truncated packets are silently discarded, so a noise burst on the USB serial link cannot cause unsafe motor or servo movement.  
+   
+**Serial startup handshake:**  
+On power-on the Raspberry Pi always resets the Arduino when it opens the serial port. We solved this with a software handshake: the Arduino emits a ready signal after startup, and the Pi waits for that signal before sending any drive commands. This prevents the robot from moving before the Pi has initialized the camera and loaded configuration.  
+   
+**Command timeout stop:**  
+If the Arduino does not receive a valid command for `COMMAND_TIMEOUT_MS = 1000`, it forces target speed to zero. This prevents stale Pi commands from keeping the motor active after a runtime interruption.  
+   
+<a name="debugging-tools"></a>  
+   
+   
+### Debugging Tools  
+   
+**Python (Raspberry Pi):** We use **Visual Studio Code** with the Pylance extension for development. The live web dashboard (`/` and `/video_feed`) allows us to observe the robot's perception state, adjust color thresholds, and test commands in real time without stopping the run. The MJPEG video feed (`/video_feed`) streams the annotated debug overlay directly from `raspy/robot_runtime.py` so we can diagnose wall detection or pillar detection issues without an HDMI cable.  
+   
+**Arduino (C++):** We use the Arduino toolchain through PlatformIO, plus a serial monitor at `9600`, to inspect incoming command strings and verify that the Pi is sending correctly formatted `STEER` and `DRIVE` packets. During hardware bring-up we also used the serial monitor to verify servo and motor responses independently of the Pi.  
+   
+<a name="web-debug-interface"></a>  
+   
+#### Web Debug Interface  
+   
+Below are screenshots of our real-time debug dashboard used during testing and competition preparation:  
+   
+<img width="1544" height="954" alt="Web Debug Interface - Main Controls and Video" src="https://github.com/user-attachments/assets/23aca0f5-e4b5-4fd7-a334-6d787f2c4480" />  
+   
+<img width="1547" height="962" alt="Web Debug Interface - Calibration and Runtime Status" src="https://github.com/user-attachments/assets/31be89b1-89ba-4637-bf5b-15cd3b1391df" />  
+   
+What this interface is used for:  
+   
+- **Live monitoring:** We watch the MJPEG stream (`/video_feed`) with overlays to confirm wall and pillar detection quality in real time.  
+- **Fast calibration:** We tune HSV bounds and camera/control parameters from the browser, then persist them with `/api/save`.  
+- **Runtime diagnostics:** We inspect `/api/status` and `/api/config` output to verify state, direction, active thresholds, and serial settings before each run.  
+- **Safe iteration loop:** Instead of reflashing firmware for each small adjustment, we tune through the web UI, test immediately on track, and only commit stable parameter sets.  
+   
+   
+<a name="team-photos"></a>  
+   
+   
+## Team Photos  
+   
+[Team Photo](https://github.com/user-attachments/assets/fc466126-dbe5-4d71-9a1d-e72979701b23)  
+   
+<a name="demonstration-videos"></a>  
+   
+   
+## Demonstration Videos  
+   
+- [Open Round](https://youtu.be/vSCUsRolfGY)   
+- [Obstacle Round](https://youtu.be/aSWpX4NWNCk)  
+   
+   
+   
+   
+<a name="contributors"></a>  
+   
+   
+## Contributors 👥  
+   
+- berkemutluu  
+- ardaberkk  
+   
+[Team Photo](https://github.com/user-attachments/assets/fc466126-dbe5-4d71-9a1d-e72979701b23)  
+   
+<a name="sources"></a>  
+   
+   
+## Resources  
+- 3D Parts Development [Onshape](https://onshape.com/)  
+- Ackerman Steering Mechanism [Wikipedia](https://en.wikipedia.org/wiki/Ackermann_steering_geometry)  
+- [Help with Open CV](https://learnopencv.com/)  
+- Lego Modules && Instruction Modules Creation [Bricklink Studio](https://www.bricklink.com/v3/studio/download.page)  
+   
+[Back to top](#top)  
 
-<a name="software"></a>
-
-# Software
-
-<a name="software-development"></a>
-
-## Software Development
-
-The runtime is split into two controllers that cooperate every frame:
-
-1. **Raspberry Pi 5 (`main/main.py`, Python)**
-   - Camera capture and image processing (OpenCV)
-   - Wall following and lap/section logic
-   - Live configuration and telemetry web UI (Flask)
-   - Serial command generation for the actuator controller
-2. **Arduino Nano R4 (`main.ino`, C++)**
-   - Real-time steering servo output
-   - Real-time DC motor direction/PWM output
-   - Safe parsing/execution of serial commands from Pi
-
-The Pi makes navigation decisions; Arduino executes low-latency hardware actions. We used the Aurduino IDE for C++ and Visiual Studio Code for Python.
-
-### Libraries Used in Runtime Files
-
-#### `main.ino` (Arduino/C++)
-- `Arduino.h`
-- `Servo.h`
-
-#### `main/main.py` (Python)
-- Standard library: `glob`, `json`, `os`, `threading`, `time`, `webbrowser`, `copy.deepcopy`
-- Third-party: `cv2` (OpenCV), `numpy`, `flask`
-- Optional/hardware-specific: `serial` (pyserial), `picamera2`
-
-<a name="programming-languages"></a>
-
-### Programming Languages
-
-| Controller | Language | IDE / Toolchain |
-|---|---|---|
-| Raspberry Pi 5 | Python 3 | Visual Studio Code |
-| Arduino Nano R4 | C++ (Arduino framework) | Arduino IDE |
-
-We chose **Python** for the Pi because of its rich ecosystem for image processing (`OpenCV`, `picamera2`) and rapid iteration. **C++** on the Arduino provides the deterministic, low-latency hardware control that Python cannot safely guarantee over a general-purpose OS.
-
-<a name="dependencies"></a>
-
-### Dependencies
-
-**Raspberry Pi (Python):**
-
-| Package | Version / Notes | Purpose |
-|---|---|---|
-| `opencv-python` (`cv2`) | ≥ 4.8 | Image capture, color masking, blob detection |
-| `numpy` | ≥ 1.24 | Array operations for frame processing |
-| `flask` | ≥ 3.0 | Live web dashboard and configuration API |
-| `pyserial` | ≥ 3.5 | UART communication with Arduino |
-| `picamera2` | latest | Raspberry Pi Camera 3 interface |
-
-**Arduino Nano R4 (C++):**
-
-| Library | Source | Purpose |
-|---|---|---|
-| `Servo.h` | Built-in (Arduino IDE) | Steering servo PWM control |
-| `Arduino.h` | Built-in | Core hardware access |
-
-### Code Installation and Run Guide
-
-Use this sequence on a Raspberry Pi 5 + Arduino Nano R4 setup.
-
-1. **Flash the Arduino controller (`main.ino`)**
-   - Open `main.ino` in Arduino IDE.
-   - Select board: **Arduino Nano R4** and correct serial port.
-   - Upload firmware and confirm Serial Monitor shows startup/ready output at `9600` baud.
-
-2. **Prepare Python runtime on Raspberry Pi**
-   - From repository root:
-     - `python3 -m venv .venv`
-     - `source .venv/bin/activate`
-     - `pip install --upgrade pip`
-     - `pip install opencv-python numpy flask pyserial picamera2`
-
-3. **Connect hardware**
-   - Connect Arduino to Raspberry Pi over USB.
-   - Confirm Arduino appears as `/dev/ttyACM0` (default in code) or update the serial setting in `main/config.json`.
-   - Connect and enable the Raspberry Pi camera.
-
-4. **Run the robot software**
-   - From repository root:
-     - `cd main`
-     - `python3 main.py`
-   - Open the web dashboard at `http://<raspberry-pi-ip>:5000/`.
-   - Optional endpoints for checks:
-     - `/status` for runtime telemetry
-     - `/config` for active configuration
-
-5. **Before track runs**
-   - Verify steering direction and motor direction are correct.
-   - Verify camera feed is live in `/video_feed`.
-   - Save tuned parameters to `main/config.json` using `/save_config`.
-
----
-
-<a name="opening-race"></a>
-
-## Opening Race
-
-The opening race requires the robot to complete **3 laps** (12 section crossings) around the track as fast as possible while staying within the track boundaries.
-
-### Strategy
-
-Our strategy uses camera-based wall following as the primary guidance system, with ultrasonic sensors as a safety backup:
-
-1. **Wall detection:** The bottom 200 px of each camera frame is processed with a grayscale threshold to isolate wall regions. The `WallFollower` algorithm measures the fraction of wall pixels on the left and right sides of the cropped ROI.
-
-2. **PD steering control:** A proportional-derivative controller (`wall_kp = 100.0`, `wall_kd = 8.0`) computes the steering angle to keep the robot centered. The derivative term dampens oscillation in straight sections.
-
-3. **Emergency avoidance:** If wall occupancy on either side exceeds a critical threshold (`critical_wall_threshold = 0.62`) or an emergency threshold (`emergency_wall_portion = 0.72`), the controller increases the steering response and reduces speed to prevent a collision.
-
-4. **Lost-wall safety stop:** If the total wall occupancy drops below the minimum confidence level (`lost_wall_min_portion = 0.018`), the system enters a safe stop state (`lost_wall_stop = true`) rather than driving blind.
-
-5. **Lap counting:** Orange and blue floor markers are detected via HSV color blobs. Each valid crossing increments a section counter. The travel direction (clockwise or counterclockwise) is locked after the first valid color sequence to prevent miscount on re-entry. After 12 sections the robot stops automatically.
-
-6. **Speed management:** Base speed is 210 PWM, bounded between 150 and 230. In high-risk wall zones the speed is reduced dynamically. A ramp limiter (`max_speed_step = 14`) prevents abrupt acceleration.
-
-The detailed logic is shown in the flowcharts in the [Software Architecture section](#software) above.
-
-<a name="obstacle-race"></a>
-
-## Obstacle Race
-
-The obstacle race extends the opening race with **traffic pillar detection and avoidance**. WRO rules require:
-- **Green pillar** → the robot must pass on the **left** side
-- **Red pillar** → the robot must pass on the **right** side
-
-### Strategy
-
-1. **Base navigation:** Same wall-following and lap-counting logic as the opening race.
-
-2. **Pillar detection:** Each frame is additionally scanned for red and green HSV blobs. Blob areas smaller than a minimum threshold are discarded as noise. When a valid pillar blob is detected, its horizontal position in the frame determines the required avoidance direction.
-
-3. **Avoidance:** The steering output is biased away from the pillar. For a green pillar detected on the left, the robot steers further right; for a red pillar on the right, it steers further left. The wall-following baseline resumes once the pillar is no longer detected.
-
-4. **Camera challenge and fix:** The Raspberry Pi Camera 3 (wide-angle variant) still did not provide a sufficiently wide field of view to reliably detect pillars at close range during initial testing. We addressed this by:
-   - Testing clip-on smartphone wide-angle lenses to increase the effective horizontal FOV
-   - Adjusting the camera mount angle downward to capture the floor region near the robot front
-
-5. **Color threshold calibration:** HSV bounds for red and green are calibrated under competition lighting via the live web dashboard before each round. Stable detection requires correct bounds — even small shifts in ambient lighting can cause missed or false detections.
-
----
-
-## Raspberry Pi Software (`main/main.py`) — Process Sections
-
-### Section A — Boot and initialization
-
-- Load persisted configuration from `main/config.json`
-- Normalize and clamp all runtime values
-- Initialize shared runtime state and synchronization objects
-- Start camera thread (`camera_loop`) and web server (Flask)
-
-### Section B — Frame acquisition and preprocessing
-
-Per frame, the Pi does the following:
-
-1. Capture frame from Picamera2
-2. Convert RGB to BGR for OpenCV pipeline
-3. Apply configured flip (`flip_code = -1`)
-4. Crop ROI using `crop_height = 200`
-
-### Section C — Wall-following control section
-
-`WallFollower.compute` uses occupancy portions and thresholds:
-
-- Lost wall if occupancy too low (`lost_wall_min_portion = 0.018`)
-- Danger escalation using:
-  - safe threshold `0.4`
-  - critical threshold `0.62`
-  - emergency portion `0.72`
-- Steering and speed constraints:
-  - `max_steer = 45`
-  - speed bounded to `min_speed = 150` and `max_speed = 230`
-  - nominal target `base_speed = 210`
-
-Control gains:
-
-- `wall_kp = 100.0`
-- `wall_kd = 8.0`
-- `center_kp = 90.0`
-
-Geometry and side-selection factors:
-
-- `wall_target_portion = 0.45`
-- `side_band_portion = 0.28`
-- `analysis_start_portion = 0.15`
-- `auto_side_margin = 0.05`
-
-Safety behavior:
-
-- `lost_wall_stop = true` triggers stop behavior on reference loss
-
-### Section D — Lap and section tracking
-
-`LapTracker.update` uses line detections and timing gates:
-
-- Minimum valid line area: `line_min_area = 500`
-- Debounce between events: `line_debounce_seconds = 1.2`
-- Clear active line state after: `line_clear_seconds = 0.35`
-- Target race completion:
-  - `sections_per_lap = 4`
-  - `lap_target = 3`
-
-Direction logic:
-
-- `direction_detection_enabled = true`
-- Direction lock occurs from first valid blue/orange sequence
-
-### Section E — Serial command output
-
-`ArduinoController` sends actuator commands with serial pacing:
-
-- Port: `/dev/ttyACM0` (auto-detect enabled)
-- Baud: `9600`
-- Update interval: `0.05 s` (20 Hz command cadence)
-- Max speed ramp step per send: `14`
-- Drive sign inversion: `drive_sign = -1`
-
-Command form is line-oriented:
-
-- `STEER:<int>`
-- `DRIVE:<int>`
-- Optional `STOP`
-
-### Section F — Web dashboard/API section
-
-Flask endpoints:
-
-- `GET /` dashboard
-- `GET /status` runtime telemetry
-- `GET /config` active config snapshot
-- `POST /update_camera`, `/update_serial`, `/update_tracking`, `/update_color`, `/toggle_color`
-- `POST /save_config`
-- `GET /video_feed` MJPEG stream (`jpeg_quality = 80`)
-
-Live interface screenshots and practical usage notes are documented in [Web Debug Interface](#web-debug-interface).
-
-The six sections above describe responsibilities by module.  
-The next flowcharts switch perspective from static sections to **runtime execution order**. These show the steps involved from startup to each control decision.
-
-### Raspberry Pi High-Level Flow
-
-```mermaid
-flowchart TD
-    A[Start main.py] --> B[Load and normalize config]
-    B --> C[Start camera_loop thread]
-    B --> D[Start Flask app]
-    C --> E[Init ArduinoController serial 9600]
-    E --> F[Init Picamera2]
-    F --> G[Capture frame]
-    G --> H[process_frame]
-    H --> I[WallFollower compute]
-    H --> J[LapTracker update]
-    H --> K[Send STEER and DRIVE]
-    H --> L[Update runtime status]
-    H --> M[Encode JPEG quality 80]
-    M --> G
-    D --> N[Serve status config video feed]
-```
-
-
-
-1. `main.py` starts by loading `config.json`, then normalizes values so control code always receives bounded numeric inputs.
-2. The process splits into two parallel activities:
-   - a camera/control loop for real-time driving decisions,
-   - a Flask server for telemetry and live parameter changes.
-3. In the camera thread, serial communication is initialized before control output is sent to hardware.
-4. Every loop iteration captures one frame, runs perception and control, then sends compact actuator commands (`STEER`, `DRIVE`) to Arduino.
-5. The same iteration also updates runtime status and encodes an MJPEG frame (`jpeg_quality = 80`) so web viewers see current state with minimal delay.
-6. The loop repeats continuously; there is no phase break between driving and monitoring because both are part of one live pipeline.
-
-### `process_frame` Detailed Flow
-
-```mermaid
-flowchart TD
-    A[Frame in RGB] --> B[Convert to BGR]
-    B --> C[Apply flip code -1]
-    C --> D[Crop ROI height 200]
-    D --> E{WALLS enabled}
-    E -- Yes --> F[WallFollower compute control]
-    E -- No --> G[Keep stop defaults]
-    F --> H[LapTracker update]
-    G --> H
-    H --> I{Lap target reached}
-    I -- Yes --> J[Force steering and speed to zero]
-    I -- No --> K[Use computed steering and speed]
-    J --> L[Apply drive_sign and send serial]
-    K --> L
-    L --> M[Update status and overlay]
-    M --> N[Return display frame]
-```
-
-
-
-1. Raw camera data is transformed into the OpenCV format and optionally flipped (`flip_code = -1`) to match physical mounting orientation.
-2. Only the lower region of interest is processed (`crop_height = 200`) to reduce computation and focus on relevant floor/wall features.
-3. If wall tracking is enabled, the controller computes steering/speed from wall occupancy; otherwise default stop-safe outputs are preserved.
-4. Lap logic runs on the same frame so navigation and race progress stay synchronized.
-5. If lap completion is reached (`lap_target = 3`), the function overrides normal outputs and forces a stop command.
-6. Before transmit, speed direction is normalized with `drive_sign = -1`; then commands are sent and runtime telemetry is refreshed for UI consumers.
-
-### `WallFollower.compute` Decision Flow
-
-```mermaid
-flowchart TD
-    A[Build wall and line masks] --> B[Measure left right occupancy]
-    B --> C{Below lost wall min 0.018}
-    C -- Yes --> D[Stop mode speed 0 steer 0]
-    C -- No --> E{Critical or emergency zone}
-    E -- Yes --> F[Lock avoid side with hysteresis]
-    F --> G[Steer away reduce speed]
-    E -- No --> H[Pick active side left right]
-    H --> I[Compute steer using KP KD]
-    I --> J[Adjust speed within 150 to 230]
-    D --> K[Return control dict]
-    G --> K
-    J --> K
-```
-
-
-
-1. The algorithm first isolates probable wall pixels and removes colored line regions to avoid cross-triggering from lane markers.
-2. Left/right occupancy portions are measured and compared to minimum confidence (`lost_wall_min_portion = 0.018`).
-3. If wall reference is lost and `lost_wall_stop` is enabled, output is immediately forced to zero-speed safe mode.
-4. When walls are visible, occupancy is mapped into risk bands:
-   - safe region below `safe_wall_threshold = 0.4`,
-   - critical region above `critical_wall_threshold = 0.62`,
-   - emergency behavior near `emergency_wall_portion = 0.72`.
-5. Steering direction selection uses side logic plus hysteresis to prevent oscillation when both sides are near thresholds.
-6. Final steering is constrained by `max_steer = 45`, and speed is dynamically reduced but kept within `min_speed = 150` and `max_speed = 230` around `base_speed = 210`.
-
-### `LapTracker.update` Flow
-
-```mermaid
-flowchart TD
-    A[Detect orange and blue blobs] --> B{Ambiguous color}
-    B -- Yes --> C[Mark ambiguous no event]
-    B -- No --> D{No valid blob area >= 500}
-    D -- Yes --> E[Clear line active after 0.35s]
-    D -- No --> F{Line already active}
-    F -- Yes --> G[Hold state no new event]
-    F -- No --> H{Debounce passed 1.2s}
-    H -- No --> I[Ignore transition]
-    H -- Yes --> J[Accept line event]
-    J --> K[Update section lap direction]
-```
-
-
-
-1. Orange/blue masks are scanned and candidate blobs smaller than `line_min_area = 500` are rejected as noise.
-2. Ambiguous simultaneous color conditions are ignored to avoid invalid direction or section updates.
-3. New events are blocked while a line is still considered active; this active state clears only after `line_clear_seconds = 0.35`.
-4. Even after clear, another transition is accepted only if debounce time passed (`line_debounce_seconds = 1.2`).
-5. Accepted transitions update section counters and locked travel direction, and each full section cycle contributes toward lap completion (`sections_per_lap = 4`, `lap_target = 3`).
-
----
-
-## Arduino Software (`main.ino`) — Process Sections
-
-### Section 1 — Hardware constants and limits
-
-- `SERVO_PIN = 6`
-- `MOTOR_IN1 = 10`
-- `MOTOR_IN2 = 9`
-- Steering bounds: `SERVO_MIN_DEG = 15`, `SERVO_CENTER_DEG = 90`, `SERVO_MAX_DEG = 165`
-- Pulse bounds: `SERVO_PULSE_MIN = 544`, `SERVO_PULSE_MAX = 2400`
-- Command line buffer size: `LINE_BUF_SIZE = 48`
-
-### Section 2 — Setup phase
-
-`setup()` performs deterministic startup:
-
-- Configure motor direction/PWM pins
-- Attach and center steering servo
-- Stop motor output
-- Start serial at `9600`
-- Emit ready status after startup delay
-
-### Section 3 — Command receive and parse phase
-
-`loop()` and `handleCommand` implement a safe parser:
-
-1. Read bytes until newline
-2. Null-terminate line buffer
-3. Parse `NAME:VALUE`
-4. Execute supported command only if parsing is valid
-
-Supported commands:
-
-- `STOP`
-- `STEER:<int>`
-- `DRIVE:<int>`
-
-### Section 4 — Actuator execution phase
-
-- `driveMotor(int speed)` clamps to `-255..255`
-- Positive = forward PWM, negative = reverse PWM, zero = active brake (`stopMotor()` sets both motor direction pins HIGH)
-- `steer(int absoluteAngleDeg)` clamps to `15..165` and maps to `544..2400 us`
-
-### Arduino Command Processing Flow
-
-```mermaid
-flowchart TD
-    A[Serial byte received] --> B{Is newline}
-    B -- No --> C[Append to line buffer]
-    B -- Yes --> D[Null terminate line]
-    D --> E[handleCommand]
-    E --> F{STOP command}
-    F -- Yes --> G[stopMotor]
-    F -- No --> H[Parse name value]
-    H --> I{Valid integer value}
-    I -- No --> J[Ignore command]
-    I -- Yes --> K{STEER or DRIVE}
-    K -- STEER --> L[steer with bounded angle]
-    K -- DRIVE --> M[driveMotor with bounded speed]
-```
-
-
-
-1. Incoming serial bytes are buffered until newline so actuator code only works with complete commands.
-2. The parser validates command form and numeric payload before touching motor/servo outputs.
-3. `STOP` has highest priority and immediately forces safe motor shutdown.
-4. Valid `STEER` and `DRIVE` payloads are passed to dedicated bounded handlers, isolating parsing errors from hardware control.
-5. Any malformed or non-numeric command is dropped, which keeps noise or truncated packets from causing unsafe movement.
-
-### `driveMotor` Flow
-
-```mermaid
-flowchart TD
-    A[Input speed] --> B[Clamp to -255..255]
-    B --> C{speed > 0}
-    C -- Yes --> D[Forward PWM on IN1]
-    C -- No --> E{speed < 0}
-    E -- Yes --> F[Reverse PWM on IN2]
-    E -- No --> G[stopMotor]
-```
-
- Input speed is first clamped to `-255..255` so PWM never exceeds supported limits. Positive values drive forward (`IN1` PWM), negative values drive reverse (`IN2` PWM), and zero routes to full stop logic with both direction pins low.
-
-### `steer` Flow
-
-```mermaid
-flowchart TD
-    A[Input angle] --> B[Clamp to 15..165]
-    B --> C[Map to 544..2400 microseconds]
-    C --> D[Write servo pulse]
-```
-
- Steering input is constrained to the safe mechanical window (`15..165` degrees), then mapped to servo pulse widths (`544..2400 µs`). This guarantees that even aggressive Pi commands remain within hardware-safe actuation limits.
-
----
-
-## Raspberry Pi ↔ Arduino Runtime Interaction
-
-```mermaid
-sequenceDiagram
-    participant Cam as Camera
-    participant Pi as Raspberry Pi main.py
-    participant Ard as Arduino main.ino
-    Cam->>Pi: Frame RGB
-    Pi->>Pi: Vision wall and lap control
-    Pi->>Ard: STEER command with integer value
-    Pi->>Ard: DRIVE command with integer value
-    Ard->>Ard: steer and driveMotor execution
-    Pi->>Pi: Update status and video feed
-```
-
-
-
-1. The camera continuously streams frames into Pi-side perception/control code.
-2. Pi converts each frame into two actuator intents: steering angle and drive speed.
-3. These intents are serialized into compact command lines and transmitted to Arduino over UART (`9600` baud).
-4. Arduino executes commands deterministically at pin level, while Pi immediately continues with the next perception cycle.
-5. In parallel, Pi publishes status/video so operators can observe the same loop that currently drives the robot.
-
-
----
-
-## System Thinking and Engineering Decisions
-
-This section documents the key design constraints, the tradeoffs we evaluated, and how these shaped the final robot.
-
-### Constraints
-
-| Constraint | Value / Limit | Impact |
-|---|---|---|
-| Track boundary | WRO 2025 field dimensions | Robot must be compact; maximum footprint ~300 mm |
-| Battery voltage | 7.4 V (2S LiPo) | Motor rated for 12 V — required high-RPM motor selection |
-| Processing power | Raspberry Pi 5, 8 GB RAM | Enables full HD camera + OpenCV; requires active cooling |
-| Weight | Balance and traction | Heavier 3S LiPo rejected; LEGO modules preferred for low mass |
-| Time (competition) | Limited pit-stop window | Two battery packs kept charged; swap time < 2 min |
-| Latency | Real-time hardware control | Arduino chosen to keep servo/motor latency < 5 ms |
-
-### Tradeoffs and Decisions
-
-#### Single controller vs. dual controller
-We initially considered running everything on the Raspberry Pi. However, the Pi's Linux OS introduces non-deterministic latency for GPIO operations. Missed servo pulses or delayed motor commands would cause the robot to drift. We kept the Arduino Nano R4 for all hardware actuation because it executes servo and motor code deterministically within microseconds. The Pi handles all perception and decision-making; the Arduino handles all execution. The two communicate at 20 Hz over USB serial.
-
-#### 2S vs. 3S LiPo battery
-A 3S (11.1 V) LiPo would power the motor directly at its rated voltage, but:
-- It weighs 30–40 g more at equivalent capacity
-- It requires an additional high-power step-down for the 5 V rail
-
-We chose a 2S (7.4 V) pack and bought the **high-RPM variant** of the JGB37-520 motor (1590 RPM at 12 V) so the motor reaches our target speed at 7.4 V. This keeps weight down and simplifies the power circuit.
-
-#### LEGO modules vs. 3D-printed steering and differential
-Our first chassis used fully 3D-printed steering and differential modules. After the first trials, the guide rails cracked under load (see photos in [Steering and Differential Mechanism](#Steering-Mechanism)). Injection-moulded LEGO parts are significantly more durable for the forces involved. We redesigned the chassis to accept LEGO Technic modules while keeping the chassis itself 3D printed for flexibility.
-
-#### N20 motor vs. JGB37-520
-The original N20 6V motor did not deliver enough torque and failed to respond to low PWM values reliably. The motor driver (L298N) compounded this by dropping ~1.4 V and providing a narrow effective PWM range. We upgraded to both a better driver (DRV8874, near-zero drop voltage) and a higher-torque motor (JGB37-520). This combination eliminated the low-speed movement failures and reduced braking distance significantly.
-
-#### USB serial vs. GPIO UART for Pi–Arduino communication
-We first attempted UART communication via the Raspberry Pi's TX/RX GPIO pins. Because the Pi operates at 3.3 V and the Arduino at 5 V, a level shifter was required. Despite using a bi-directional level shifter, the connection was unreliable and caused intermittent communication failures. Switching to USB serial (Pi USB-A → Arduino USB-C) resolved all communication issues. As a side benefit, the USB cable also powers the Arduino, eliminating an extra power wire.
-
-#### Raspberry Pi Camera 3 vs. alternative cameras
-We evaluated several camera options for the obstacle race. The Raspberry Pi Camera 3 (wide-angle) integrates natively with `picamera2` and produces frames ready for OpenCV without conversion overhead. The main drawback was insufficient horizontal FOV to detect close-range pillars. We addressed this with a clip-on wide-angle lens rather than switching cameras, which would have required significant software changes.
-
-### Risk Identification and Mitigation
-
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Pi overheats during long run | Medium | Active cooler + heatsink; tested continuously for 15 min |
-| Serial noise corrupts command | Low | Arduino parser validates and discards malformed packets |
-| Wall detector loses reference | Medium | `lost_wall_stop = true` — robot stops rather than drives blind |
-| Battery depletes mid-run | Medium | Two packs per round; LM2596 LED gives visual low-voltage warning |
-| Motor adapter slips | Low | Increased infill to 80% on printed adapters; tested under load |
-| Gyro drift during long straight | Medium | IMU bias computed at startup; camera is primary reference |
-
-### Tests && Decisions
-
-To make our design choices and the reasons behind them easier to understand, we summarized the test values from our internal trials:
-
-| Decision area | Option A | Option B | Example measured result | Final choice and reason |
-|---|---|---|---|---|
-| Controller architecture | Pi-only control | Pi + Arduino split | Pi-only actuator command jitter: **18–35 ms**; Pi+Arduino jitter: **2–4 ms** | **Pi + Arduino**, because steering/motor output stayed consistent in turns |
-| Battery setup | 3S LiPo (11.1 V) | 2S LiPo (7.4 V) + high-RPM motor | Added pack mass with 3S: **+34 g**; avg lap time improvement only **~0.2 s** | **2S + high-RPM JGB37-520**, better weight/simplicity tradeoff |
-| Drive system | N20 + L298N | JGB37-520 + DRV8874 | Minimum reliable start PWM: **N20/L298N = 168**, **JGB/DRV8874 = 122**; short-brake distance improved from **43 cm → 26 cm** | **JGB37-520 + DRV8874**, stronger low-speed response and stopping control |
-| Steering/differential build | Fully 3D-printed modules | LEGO Technic modules | Failure rate over 20 runs: **3D-printed = 6/20**, **LEGO = 0/20** | **LEGO modules**, much higher durability and repeatability |
-| Pi↔Arduino link | GPIO UART + level shifter | USB serial | Packet errors in 10-minute run: **GPIO UART = 17**, **USB serial = 0** | **USB serial**, stable communication and easier wiring |
-| Camera FOV strategy | Bare Camera 3 wide | Camera 3 wide + clip-on lens | Pillar detection success at close range: **71% → 93%** FOV **120 degrees → 139.3 degrees** | **Clip-on lens added**, improved obstacle reliability without camera stack rewrite |
-
-
----
-
-<a name="utilities"></a>
-
-
-## Utilities
-
-
-<a name="failsafe"></a>
-
-
-### Failsafe Mechanisms
-
-We implemented multiple layers of failsafe protection to prevent hardware damage and ensure safe competition runs.
-
-#### Hardware Failsafes
-
-**Wire color-coding:**
-We wrapped wires with colored tape so that every wire belonging to the same subsystem shares the same color. This reduces reconnection errors when disassembling and reassembling the robot between rounds. During early testing, an unlabeled wire became detached and was difficult to trace; after introducing color coding, this type of error has not recurred.
-
-**Low-voltage indicator:**
-The LM2596 step-down module (5 V sensor rail) has an onboard LED that dims when input voltage falls below ~7.5 V. This gives us a visual warning that the LiPo cell is approaching its minimum safe voltage before the servo response degrades. We also keep a spare charged battery pack ready so we can swap within the pit stop window.
-
-**Servo mechanical limits:**
-The steering servo is constrained in firmware to an absolute range of 15°–165°, mapped to safe pulse widths (544–2400 µs). This prevents a software error from issuing a command that would physically damage the servo linkage or lego steering module.
-
-**Motor driver protection:**
-The DRV8874 provides overcurrent shutdown and thermal protection. If the motor stalls or the robot jams against a wall, the driver enters protection mode rather than burning the motor or wiring.
-
-#### Software Failsafes
-
-**Lost-wall stop (`lost_wall_stop = true`):**
-If the camera loses wall reference (occupancy below `lost_wall_min_portion = 0.018`), the system immediately forces drive speed and steering to zero. This prevents the robot from driving off the track when, for example, a reflection or shadow causes the wall detector to lose confidence.
-
-**Speed ramp limiter (`max_speed_step = 14`):**
-The maximum speed change per serial command cycle is capped at 14 PWM units. This prevents sudden torque spikes that could cause the chassis to lose traction or cause the motor adapter to slip.
-
-**Serial command validation:**
-The Arduino parser only executes commands that match the expected format (`NAME:VALUE` with a valid integer). Malformed or truncated packets are silently discarded, so a noise burst on the USB serial link cannot cause unsafe motor or servo movement.
-
-**Serial startup handshake:**
-On power-on the Raspberry Pi always resets the Arduino when it opens the serial port. We solved this with a software handshake: the Arduino emits a ready signal after startup, and the Pi waits for that signal before sending any drive commands. This prevents the robot from moving before the Pi has initialized the camera and loaded configuration.
-
-**Lap-completion stop:**
-After `lap_target = 3` laps (12 section crossings) the software forces steering and speed to zero and disables the drive output, regardless of any other sensor state. This ensures the robot stops in bounds at the end of a run.
-
-<a name="debugging-tools"></a>
-
-
-### Debugging Tools
-
-**Python (Raspberry Pi):** We use **Visual Studio Code** with the Pylance extension for development. The live web dashboard (Flask, `/` and `/video_feed`) allows us to observe the robot's perception state, adjust color thresholds, and toggle features in real time without stopping the run. The MJPEG video feed (`/video_feed`) streams the annotated debug overlay directly from `main.py` so we can diagnose wall detection or pillar detection issues without an HDMI cable.
-
-**Arduino (C++):** We use the **Arduino IDE** with the built-in Serial Monitor to inspect incoming command strings and verify that the Pi is sending correctly formatted `STEER` and `DRIVE` packets. During hardware bring-up we also used the Serial Monitor to verify servo and motor responses independently of the Pi.
-
-<a name="web-debug-interface"></a>
-
-#### Web Debug Interface
-
-Below are screenshots of our real-time Flask debug dashboard used during testing and competition preparation:
-
-<img width="1544" height="954" alt="Web Debug Interface - Main Controls and Video" src="https://github.com/user-attachments/assets/23aca0f5-e4b5-4fd7-a334-6d787f2c4480" />
-
-<img width="1547" height="962" alt="Web Debug Interface - Calibration and Runtime Status" src="https://github.com/user-attachments/assets/31be89b1-89ba-4637-bf5b-15cd3b1391df" />
-
-What this interface is used for:
-
-- **Live monitoring:** We watch the MJPEG stream (`/video_feed`) with overlays to confirm wall and pillar detection quality in real time.
-- **Fast calibration:** We tune HSV bounds, tracking toggles, and camera/control parameters from the browser, then persist them with `/save_config`.
-- **Runtime diagnostics:** We inspect `/status` and `/config` output to verify lap counters, direction lock, active thresholds, and serial settings before each run.
-- **Safe iteration loop:** Instead of reflashing firmware for each small adjustment, we tune through the web UI, test immediately on track, and only commit stable parameter sets.
-
-
-<a name="team-photos"></a>
-
-
-## Team Photos
-
-[Team Photo](https://github.com/user-attachments/assets/fc466126-dbe5-4d71-9a1d-e72979701b23)
-
-<a name="demonstration-videos"></a>
-
-
-## Demonstration Videos
-
-- [Open Round](https://youtu.be/vSCUsRolfGY) 
-- [Obstacle Round](https://youtu.be/aSWpX4NWNCk)
-
-
-
-
-<a name="contributors"></a>
-
-
-## Contributors 👥
-
-- berkemutluu
-- ardaberkk
-
-[Team Photo](https://github.com/user-attachments/assets/fc466126-dbe5-4d71-9a1d-e72979701b23)
-
-<a name="sources"></a>
-
-
-## Resources
-- 3D Parts Development [Onshape](https://onshape.com/)
-- Ackerman Steering Mechanism [Wikipedia](https://en.wikipedia.org/wiki/Ackermann_steering_geometry)
-- [Help with Open CV](https://learnopencv.com/)
-- Lego Modules && Instruction Modules Creation [Bricklink Studio](https://www.bricklink.com/v3/studio/download.page)
-
-[Back to top](#top)
